@@ -12,9 +12,22 @@
     <div v-else>
       <div v-if="response">
         <div v-for="r in response" :key="r.QID">
-          <div class="text-lg">
-            {{ r.QID }} {{ r.similarity_score }}
-          </div>
+          <a :href="'https://www.wikidata.org/wiki/' + r.QID" class="flex p-2">
+            <div class="flex-1">
+              <div class="text-2xl">
+                {{ r.label }} ({{ r.QID }})
+              </div>
+              <div class="text-lg">
+                {{ r.description }}
+              </div>
+              <div class="text-lg">
+                {{ r.similarity_score }}
+              </div>
+            </div>
+            <div class="text-lg px-2">
+              <img class="rounded-2xl" :src="r.image" />
+            </div>
+          </a>
         </div>
       </div>
       <div v-else class="text-lg">

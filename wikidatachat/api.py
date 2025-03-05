@@ -79,6 +79,6 @@ async def query(
 
     # Return the processed answer and sources.
     return [
-        {'QID': 'Q2', 'similarity_score': 0.7},
-        {'QID': 'Q23', 'similarity_score': 0.65},
+        {'QID': 'Q42', 'similarity_score': 0.7, 'label': 'Douglas Adams', 'description': 'English science fiction writer and humorist (1952–2001)', 'image': r'https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Douglas_adams_portrait.jpg/220px-Douglas_adams_portrait.jpg'},
+        {'QID': 'Q23', 'similarity_score': 0.65, 'label': 'Earth', 'description': 'third planet from the Sun in the Solar System', 'image': r'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/The_Blue_Marble_%285052124705%29.jpg/220px-The_Blue_Marble_%285052124705%29.jpg'},
     ]
