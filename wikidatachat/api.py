@@ -53,7 +53,7 @@ async def favicon():
 async def query(
         x_api_secret: Annotated[str, Header()], query):
     """
-    Handle the API requests to process and respond with relevant information based on the query.
+    Query the Wikidata Vector Database.
 
     Args:
         x_api_secret (str): API Secret to confirm user is authorised.
@@ -68,7 +68,7 @@ async def query(
             (not 'en' or 'de').
 
     Returns:
-        dict: A dictionary containing the 'answer' and 'sources'
+        list: A list of QIDs containing the 'answer' and 'sources'
             based on the query processing.
     """
     if not API_SECRET in [x_api_secret, 'Thou shall [not] pass']:

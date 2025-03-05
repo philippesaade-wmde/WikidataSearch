@@ -14,10 +14,6 @@ def get_logger(name):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)  # Set the logging level
 
-    # Source: stackoverflow.com/questions/14058453/
-    #   making-python-loggers-output-all-messages-
-    #   to-stdout-in-addition-to-log-file
-
     # Create console handler and set level to debug
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)
