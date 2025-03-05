@@ -57,7 +57,6 @@
         </div>
         <div v-if="response" class="flex justify-center w-full">
           <div class="flex-col w-[90%] md:w-4/5 lg:w-2/3 space-y-7">
-            <!-- <FieldQuestion :text="inputText" /> -->
             <FieldAnswer :response="response" :isLoading="false" />
           </div>
         </div>
@@ -75,43 +74,15 @@
 import { Icon } from '@iconify/vue'
 import { ref } from 'vue'
 import FieldAnswer from '../components/field/FieldAnswer.vue'
-// import FieldQuestion from '../components/field/FieldQuestion.vue'
 import type { ResponseObject } from '../types/response-object.d.ts'
 import Settings from '../components/Settings.vue'
 
 const inputText = ref('')
-const response = ref<ResponseObject>()
+const response = ref<ResponseObject[]>()
 const error = ref<string>()
 const displayResponse = ref(false)
 const inputFocused = ref(false)
 const showSettings = ref(!apiSecret())
-
-// response.value = {
-//   answer:
-//     'Confidential information should not be used or disclosed except as necessary for performance under the agreement.',
-//   sources: [
-//     {
-//       id: 1,
-//       src: 'https://example.com/document1',
-//       content:
-//         'Parties agree that Confidential Information shall not be used or disclosed except as necessary for performance hereunder.',
-//       score: 4.975016137070867
-//     },
-//     {
-//       id: 2,
-//       src: 'https://example.com/document12',
-//       content: 'Any waiver of compliance with any provision of this Agreement must be in writing.',
-//       score: 2.1152231308302407
-//     },
-//     {
-//       id: 3,
-//       src: 'https://example.com/document19',
-//       content:
-//         'This Agreement shall be governed by and construed in accordance with the laws of the State of New York.',
-//       score: 1.8400423245643809
-//     }
-//   ]
-// }
 
 function apiSecret() {
   const apiSecret = sessionStorage.getItem('api-secret')
@@ -132,7 +103,7 @@ async function search() {
   if (!secret) throw 'API secret not set.'
 
   try {
-    const fetchResult = await fetch(`/api?query=${inputText.value}`, {
+    const fetchResult = await fetch(`/query?query=${inputText.value}`, {
       headers: { 'x-api-secret': secret }
     })
     const jsonResponse = await fetchResult.json()

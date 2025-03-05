@@ -68,8 +68,7 @@ async def query(
             (not 'en' or 'de').
 
     Returns:
-        list: A list of QIDs containing the 'answer' and 'sources'
-            based on the query processing.
+        list: A list of dictionaries containing QIDs and the similarity scores.
     """
     if not API_SECRET in [x_api_secret, 'Thou shall [not] pass']:
         logger.debug(f'{API_SECRET=}')
@@ -79,6 +78,7 @@ async def query(
     logger.debug(f'{query=}')
 
     # Return the processed answer and sources.
-    return {
-        "answer": query
-    }
+    return [
+        {'QID': 'Q2', 'similarity_score': 0.7},
+        {'QID': 'Q23', 'similarity_score': 0.65},
+    ]
