@@ -47,9 +47,6 @@
                 @click="inputText.length > 0 ? search() : {}"
               />
             </div>
-            <p class="pt-2 pl-4 text-sm text-light-distinct-text dark:text-dark-distinct-text">
-              {{ $t('check-linked-wiki-pages-notice') }}
-            </p>
           </div>
         </div>
         <div v-if="error && error.length" class="flex text-xl font-bold justify-center w-full">

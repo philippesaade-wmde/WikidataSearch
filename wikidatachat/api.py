@@ -6,9 +6,11 @@ from typing import Annotated
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Header
+import requests
 
-# Import custom modules for the RAG pipeline and logging.
 from .logger import get_logger
+from .jina import JinaAIAPIEmbedder
+from .datastax import AstraDBConnect
 
 # Create logger instance from base logger config in `logger.py`
 logger = get_logger(__name__)  # Initialize a logger for this module.
@@ -26,6 +28,46 @@ app.mount(
     StaticFiles(directory=f"{FRONTEND_STATIC_DIR}/assets"),
     name="frontend-assets"
 )
+
+jina_api_key = os.environ.get('JINA_API_KEY')
+embedding_model = JinaAIAPIEmbedder(api_key=jina_api_key)
+astradb = AstraDBConnect(os.environ, embedding_model)
+
+def get_wikidata_items(qids, language="en"):
+    url = "https://www.wikidata.org/w/api.php"
+    params = {
+        "action": "wbgetentities",
+        "format": "json",
+        "ids": "|".join(qids),
+        "props": "labels|descriptions|claims"
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    result = {}
+    for qid in qids:
+        if "entities" not in data or qid not in data["entities"]:
+            result[qid] = {"error": "Invalid QID or item not found"}
+            continue
+
+        entity = data["entities"][qid]
+        label = entity.get("labels", {}).get(language, {}).get("value", "No label available")
+        description = entity.get("descriptions", {}).get(language, {}).get("value", "No description available")
+        image_filename = None
+        if "P18" in entity.get("claims", {}):
+            image_filename = entity["claims"]["P18"][0]["mainsnak"]["datavalue"]["value"]
+            image_url = f"https://commons.wikimedia.org/wiki/Special:FilePath/{image_filename}"
+        else:
+            image_url = "No image available"
+
+        result[qid] = {
+            "label": label,
+            "description": description,
+            "image": image_url
+        }
+
+    return result
 
 @app.get("/")
 async def root():
@@ -61,7 +103,7 @@ async def query(
         top_k (int, optional): The number of top results to return.
             Defaults to 10.
         lang (str, optional): The language code for the query processing
-            ('en' for English, 'de' for German). Defaults to 'en'.
+            ('en' for English, 'de' for German). Defaults to 'en'
 
     Raises:
         ValueError: If the provided language is not supported
@@ -74,11 +116,19 @@ async def query(
         logger.debug(f'{API_SECRET=}')
         # raise ValueError("API key is missing or incorrect")
 
-    # Log the input parameters for debugging.
     logger.debug(f'{query=}')
+    results = astradb.get_similar_qids(query, K=10, filter={})
 
-    # Return the processed answer and sources.
-    return [
-        {'QID': 'Q42', 'similarity_score': 0.7, 'label': 'Douglas Adams', 'description': 'English science fiction writer and humorist (1952–2001)', 'image': r'https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Douglas_adams_portrait.jpg/220px-Douglas_adams_portrait.jpg'},
-        {'QID': 'Q23', 'similarity_score': 0.65, 'label': 'Earth', 'description': 'third planet from the Sun in the Solar System', 'image': r'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/The_Blue_Marble_%285052124705%29.jpg/220px-The_Blue_Marble_%285052124705%29.jpg'},
-    ]
+    seen = set()
+    output = [{
+        'QID': r[0].metadata['QID'],
+        'similarity_score': r[1]
+    } for r in results if r[0].metadata['QID'] not in seen and not seen.add(r[0].metadata['QID'])]
+
+    wikidata = get_wikidata_items([i['QID'] for i in output])
+    output = [{
+        **r,
+        **wikidata[r['QID']]
+    } for r in output]
+    logger.debug(f'{output=}')
+    return output

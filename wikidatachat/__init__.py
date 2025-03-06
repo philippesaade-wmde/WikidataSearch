@@ -16,3 +16,4 @@ from rag_pipeline import your_function_here  # Replace `your_function_here` with
 Please refer to the documentation of the `.api` module for detailed descriptions of the available interfaces and their respective usage guidelines.
 """
 from .api import *
+from .jina import JinaAIAPIEmbedder
