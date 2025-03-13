@@ -90,7 +90,12 @@ async def favicon():
     """
     return FileResponse(f"{FRONTEND_STATIC_DIR}/favicon.ico")
 
+# Add a route where the vector is given instead of a query.
 
+# Add a route where no vector is given by instead a filter option.
+
+# Add parameters like language, is_property, K, filter by QID.
+# Return the embedding of the items as well.
 @app.get("/query")
 async def query(
         x_api_secret: Annotated[str, Header()], query):
@@ -125,10 +130,11 @@ async def query(
         'similarity_score': r[1]
     } for r in results if r[0].metadata['QID'] not in seen and not seen.add(r[0].metadata['QID'])]
 
-    wikidata = get_wikidata_items([i['QID'] for i in output])
+    qids = [i['QID'] for i in output]
+    wikidata = get_wikidata_items(qids)
     output = [{
         **r,
         **wikidata[r['QID']]
     } for r in output]
-    logger.debug(f'{output=}')
+    logger.debug(f'{qids=}')
     return output

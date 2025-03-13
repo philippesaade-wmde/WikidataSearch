@@ -25,8 +25,7 @@ class AstraDBConnect:
         ASTRA_DB_COLLECTION = datastax_tokens["ASTRA_DB_COLLECTION"]
 
         self.graph_store = AstraDBVectorStore(
-            # collection_name=ASTRA_DB_COLLECTION,
-            collection_name="wikidata_texttest",
+            collection_name=ASTRA_DB_COLLECTION,
             embedding=embedding_model,
             token=ASTRA_DB_APPLICATION_TOKEN,
             api_endpoint=ASTRA_DB_API_ENDPOINT,
@@ -57,5 +56,9 @@ class AstraDBConnect:
           where list_of_qids are the QIDs of the results and
           list_of_scores are the corresponding similarity scores.
         """
-        results = self.graph_store.similarity_search_with_relevance_scores(query, k=K, filter=filter)
+        results = self.graph_store.similarity_search_with_relevance_scores(
+            query,
+            k=K,
+            filter=filter
+        )
         return results
