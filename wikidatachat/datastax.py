@@ -61,4 +61,12 @@ class AstraDBConnect:
             k=K,
             filter=filter
         )
-        return results
+
+        seen = set()
+        output = [{
+                'QID': r[0].metadata['QID'],
+                'similarity_score': r[1],
+                'label': r[0].metadata['Label'],
+                'description': r[0].metadata['Description'],
+            } for r in results if r[0].metadata['QID'] not in seen and not seen.add(r[0].metadata['QID'])]
+        return output

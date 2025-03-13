@@ -6,7 +6,6 @@ from typing import Annotated
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Header
-import requests
 
 from .logger import get_logger
 from .jina import JinaAIAPIEmbedder
@@ -33,42 +32,6 @@ jina_api_key = os.environ.get('JINA_API_KEY')
 embedding_model = JinaAIAPIEmbedder(api_key=jina_api_key)
 astradb = AstraDBConnect(os.environ, embedding_model)
 
-def get_wikidata_items(qids, language="en"):
-    url = "https://www.wikidata.org/w/api.php"
-    params = {
-        "action": "wbgetentities",
-        "format": "json",
-        "ids": "|".join(qids),
-        "props": "labels|descriptions|claims"
-    }
-
-    response = requests.get(url, params=params)
-    data = response.json()
-
-    result = {}
-    for qid in qids:
-        if "entities" not in data or qid not in data["entities"]:
-            result[qid] = {"error": "Invalid QID or item not found"}
-            continue
-
-        entity = data["entities"][qid]
-        label = entity.get("labels", {}).get(language, {}).get("value", "No label available")
-        description = entity.get("descriptions", {}).get(language, {}).get("value", "No description available")
-        image_filename = None
-        if "P18" in entity.get("claims", {}):
-            image_filename = entity["claims"]["P18"][0]["mainsnak"]["datavalue"]["value"]
-            image_url = f"https://commons.wikimedia.org/wiki/Special:FilePath/{image_filename}"
-        else:
-            image_url = "No image available"
-
-        result[qid] = {
-            "label": label,
-            "description": description,
-            "image": image_url
-        }
-
-    return result
-
 @app.get("/")
 async def root():
     """
@@ -90,51 +53,75 @@ async def favicon():
     """
     return FileResponse(f"{FRONTEND_STATIC_DIR}/favicon.ico")
 
-# Add a route where the vector is given instead of a query.
-
-# Add a route where no vector is given by instead a filter option.
-
-# Add parameters like language, is_property, K, filter by QID.
-# Return the embedding of the items as well.
-@app.get("/query")
+@app.get("/entity/query/")
 async def query(
-        x_api_secret: Annotated[str, Header()], query):
+        x_api_secret: Annotated[str, Header()],
+        query: str,
+        K: int=10,
+    ):
     """
-    Query the Wikidata Vector Database.
+    Query the Entities in the Wikidata Vector Database.
 
     Args:
         x_api_secret (str): API Secret to confirm user is authorised.
         query (str): The query string to be processed.
-        top_k (int, optional): The number of top results to return.
-            Defaults to 10.
-        lang (str, optional): The language code for the query processing
-            ('en' for English, 'de' for German). Defaults to 'en'
-
-    Raises:
-        ValueError: If the provided language is not supported
-            (not 'en' or 'de').
 
     Returns:
         list: A list of dictionaries containing QIDs and the similarity scores.
     """
     if not API_SECRET in [x_api_secret, 'Thou shall [not] pass']:
         logger.debug(f'{API_SECRET=}')
-        # raise ValueError("API key is missing or incorrect")
+        raise ValueError("API key is missing or incorrect")
 
     logger.debug(f'{query=}')
-    results = astradb.get_similar_qids(query, K=10, filter={})
+    results = astradb.get_similar_qids(query, K=K, filter={'IsItem': True})
+    return results
 
-    seen = set()
-    output = [{
-        'QID': r[0].metadata['QID'],
-        'similarity_score': r[1]
-    } for r in results if r[0].metadata['QID'] not in seen and not seen.add(r[0].metadata['QID'])]
+@app.get("/property/query/")
+async def query(
+        x_api_secret: Annotated[str, Header()],
+        query: str,
+        K: int=10,
+    ):
+    """
+    Query the Properties in the Wikidata Vector Database.
 
-    qids = [i['QID'] for i in output]
-    wikidata = get_wikidata_items(qids)
-    output = [{
-        **r,
-        **wikidata[r['QID']]
-    } for r in output]
-    logger.debug(f'{qids=}')
-    return output
+    Args:
+        x_api_secret (str): API Secret to confirm user is authorised.
+        query (str): The query string to be processed.
+
+    Returns:
+        list: A list of dictionaries containing QIDs and the similarity scores.
+    """
+    if not API_SECRET in [x_api_secret, 'Thou shall [not] pass']:
+        logger.debug(f'{API_SECRET=}')
+        raise ValueError("API key is missing or incorrect")
+
+    logger.debug(f'{query=}')
+    results = astradb.get_similar_qids(query, K=K, filter={'IsProperty': True})
+    return results
+
+@app.get("/similarity-score/")
+async def query(
+        x_api_secret: Annotated[str, Header()],
+        query: str,
+        qid: str,
+        K: int=10,
+    ):
+    """
+    Query the Properties in the Wikidata Vector Database.
+
+    Args:
+        x_api_secret (str): API Secret to confirm user is authorised.
+        query (str): The query string to be processed.
+
+    Returns:
+        list: A list of dictionaries containing QIDs and the similarity scores.
+    """
+    if not API_SECRET in [x_api_secret, 'Thou shall [not] pass']:
+        logger.debug(f'{API_SECRET=}')
+        raise ValueError("API key is missing or incorrect")
+
+    logger.debug(f'{query=}')
+    results = astradb.get_similar_qids(query, K=K, filter={'QID': qid})
+    return results

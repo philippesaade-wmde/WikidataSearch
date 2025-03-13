@@ -17,8 +17,8 @@
       <template v-else-if="response?.length">
         <div 
           v-for="r in response" 
-          :key="r.QID" 
-          class="p-4 m-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border 
+          :key="r.QID"
+          class="p-4 m-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border
                 hover:shadow-lg hover:bg-light-hover dark:hover:bg-dark-hover transition cursor-pointer"
         >
           <a :href="'https://www.wikidata.org/wiki/' + r.QID" class="flex items-center gap-6">
@@ -36,10 +36,7 @@
             </div>
 
             <!-- Image (Larger) -->
-            <div v-if="r.image" class="flex-shrink-0">
-              <img class="rounded-2xl max-h-32 shadow-md border border-light-border dark:border-dark-border" 
-                   :src="r.image" :alt="r.label" />
-            </div>
+            <FieldImage :qid="r.QID" />
           </a>
         </div>
       </template>
@@ -56,6 +53,7 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import FieldImage from '../field/FieldImage.vue'
 import type { ResponseObject } from '../../types/response-object.d.ts'
 
 defineProps<{
