@@ -14,7 +14,7 @@
         class="flex justify-center space-x-3 text-4xl md:text-5xl text-light-text dark:text-dark-text font-display"
       >
         <Icon icon="ooui:logo-wikimedia" />
-        <p class="-mt-[0.025em] md:mt-0">WikidataChat</p>
+        <p class="-mt-[0.025em] md:mt-0">Wikidata Search</p>
       </h1>
 
       <div v-if="!apiSecret()"></div>
@@ -100,7 +100,7 @@ async function search() {
   if (!secret) throw 'API secret not set.'
 
   try {
-    const fetchResult = await fetch(`/entity/query?query=${inputText.value}&only_qids=false`, {
+    const fetchResult = await fetch(`http://localhost:8000/item/query?query=${inputText.value}`, {
       headers: { 'x-api-secret': secret }
     })
     const jsonResponse = await fetchResult.json()

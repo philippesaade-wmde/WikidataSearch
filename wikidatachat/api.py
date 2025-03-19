@@ -5,7 +5,8 @@ from typing import Annotated
 # Import necessary types and classes from FastAPI and other libraries.
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI, Header
+from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from .logger import get_logger
 from .jina import JinaAIAPIEmbedder
@@ -15,24 +16,52 @@ from .datastax import AstraDBConnect
 logger = get_logger(__name__)  # Initialize a logger for this module.
 
 # Retrieve the frontend static directory path from environment variables, falling back to a default if not set.
-FRONTEND_STATIC_DIR = os.environ.get('FRONTEND_STATIC_DIR', './frontend/dist')
-API_SECRET = os.environ.get('API_SECRET', 'Thou shall [not] pass')
+FRONTEND_STATIC_DIR = os.environ.get("FRONTEND_STATIC_DIR", "./frontend/dist")
+API_SECRET = os.environ.get("API_SECRET", "Thou shall [not] pass")
 
-app = FastAPI()  # Create an instance of the FastAPI application.
+app = FastAPI(
+    title="Wikidata Vector Search",
+    description="An API for querying Wikidata Vector Database.",
+    version="1.0.0",
+    openapi_tags=[{"name": "Queries", "description": "Endpoints for querying data"}],
+    openapi_url="/openapi.json",
+    docs_url="/docs",  # Change the Swagger UI path if needed
+    redoc_url="/redoc",  # Change the ReDoc path if needed
+    swagger_ui_parameters={"persistAuthorization": True},
+)
+
+# app.openapi_schema = {
+#     "components": {
+#         "securitySchemes": {
+#             "ApiKeyAuth": {"type": "apiKey", "in": "header", "name": "x-api-secret"}
+#         }
+#     },
+#     "security": [{"ApiKeyAuth": []}],
+# }
+
+# Enable all Cors
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 # Serve static files from the '/assets' endpoint,
 #   pulling from the frontend static directory.
 app.mount(
     "/assets",
     StaticFiles(directory=f"{FRONTEND_STATIC_DIR}/assets"),
-    name="frontend-assets"
+    name="frontend-assets",
 )
 
-jina_api_key = os.environ.get('JINA_API_KEY')
+jina_api_key = os.environ.get("JINA_API_KEY")
 embedding_model = JinaAIAPIEmbedder(api_key=jina_api_key)
 astradb = AstraDBConnect(os.environ, embedding_model)
 
-@app.get("/")
+
+@app.get("/", include_in_schema=False)
 async def root():
     """
     Serve the main HTML file for the root endpoint.
@@ -43,7 +72,7 @@ async def root():
     return FileResponse(f"{FRONTEND_STATIC_DIR}/index.html")
 
 
-@app.get("/favicon.ico")
+@app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     """
     Serve the favicon.ico file.
@@ -53,12 +82,41 @@ async def favicon():
     """
     return FileResponse(f"{FRONTEND_STATIC_DIR}/favicon.ico")
 
-@app.get("/entity/query/")
-async def query(
-        x_api_secret: Annotated[str, Header()],
-        query: str,
-        K: int=10,
-    ):
+
+@app.get(
+    "/item/query/",
+    responses={
+        200: {
+            "description": "Returns a list of relevant Wikidata item QIDs with similarity scores",
+            "content": {
+                "application/json": {
+                    "example": [{"QID": "Q42", "similarity_score": 0.95}]
+                }
+            },
+        },
+        401: {
+            "description": "Invalid API secret",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "X-API-SECRET incorrect or missing"}
+                }
+            },
+        },
+        422: {
+            "description": "Missing query parameter",
+            "content": {
+                "application/json": {"example": {"detail": "Query is missing"}}
+            },
+        },
+    },
+)
+async def item_query_route(
+    x_api_secret: Annotated[
+        str, Header(..., required=True, description="API key for authentication")
+    ],
+    query: str = Query(..., example="testing"),
+    K: int = 10,
+):
     """
     Query the Entities in the Wikidata Vector Database.
 
@@ -69,20 +127,50 @@ async def query(
     Returns:
         list: A list of dictionaries containing QIDs and the similarity scores.
     """
-    if not API_SECRET in [x_api_secret, 'Thou shall [not] pass']:
-        logger.debug(f'{API_SECRET=}')
-        raise ValueError("API key is missing or incorrect")
+    if not API_SECRET in [x_api_secret, "Thou shall [not] pass"]:
+        logger.debug(f"{API_SECRET=}")
+        raise HTTPException(status_code=401, detail="X-API-SECRET incorrect or missing")
 
-    logger.debug(f'{query=}')
-    results = astradb.get_similar_qids(query, K=K, filter={'IsItem': True})
+    if query == "":
+        raise HTTPException(status_code=422, detail="Query is missing")
+
+    logger.debug(f"{query=}")
+    results = astradb.get_similar_qids(query, K=K, filter={"IsItem": True})
     return results
 
-@app.get("/property/query/")
-async def query(
-        x_api_secret: Annotated[str, Header()],
-        query: str,
-        K: int=10,
-    ):
+
+@app.get(
+    "/property/query/",
+    responses={
+        200: {
+            "description": "Returns a list of relevant Wikidata property PIDs with similarity scores",
+            "content": {
+                "application/json": {"example": [{"QID": "P31", "score": 0.89}]}
+            },
+        },
+        401: {
+            "description": "Invalid API secret",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "X-API-SECRET incorrect or missing"}
+                }
+            },
+        },
+        422: {
+            "description": "Missing query parameter",
+            "content": {
+                "application/json": {"example": {"detail": "Query is missing"}}
+            },
+        },
+    },
+)
+async def property_query_route(
+    x_api_secret: Annotated[
+        str, Header(..., required=True, description="API key for authentication")
+    ],
+    query: str = Query(..., example="testing"),
+    K: int = 10,
+):
     """
     Query the Properties in the Wikidata Vector Database.
 
@@ -93,21 +181,51 @@ async def query(
     Returns:
         list: A list of dictionaries containing QIDs and the similarity scores.
     """
-    if not API_SECRET in [x_api_secret, 'Thou shall [not] pass']:
-        logger.debug(f'{API_SECRET=}')
+    if not API_SECRET in [x_api_secret, "Thou shall [not] pass"]:
+        logger.debug(f"{API_SECRET=}")
         raise ValueError("API key is missing or incorrect")
 
-    logger.debug(f'{query=}')
-    results = astradb.get_similar_qids(query, K=K, filter={'IsProperty': True})
+    if query == "":
+        raise HTTPException(status_code=422, detail="Query is missing")
+
+    logger.debug(f"{query=}")
+    results = astradb.get_similar_qids(query, K=K, filter={"IsProperty": True})
     return results
 
-@app.get("/similarity-score/")
-async def query(
-        x_api_secret: Annotated[str, Header()],
-        query: str,
-        qid: str,
-        K: int=10,
-    ):
+
+@app.get(
+    "/similarity-score/",
+    responses={
+        200: {
+            "description": "Returns similarity scores for a given query and QID",
+            "content": {
+                "application/json": {"example": [{"QID": "Q2", "score": 0.78}]}
+            },
+        },
+        401: {
+            "description": "Invalid API secret",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "X-API-SECRET incorrect or missing"}
+                }
+            },
+        },
+        422: {
+            "description": "Missing query or QID parameter",
+            "content": {
+                "application/json": {"example": {"detail": "Query or QID is missing"}}
+            },
+        },
+    },
+)
+async def similarity_score_route(
+    x_api_secret: Annotated[
+        str, Header(..., required=True, description="API key for authentication")
+    ],
+    query: str = Query(..., example="testing"),
+    qid: str = Query(..., example="testing QID"),
+    K: int = 10,
+):
     """
     Query the Properties in the Wikidata Vector Database.
 
@@ -118,10 +236,16 @@ async def query(
     Returns:
         list: A list of dictionaries containing QIDs and the similarity scores.
     """
-    if not API_SECRET in [x_api_secret, 'Thou shall [not] pass']:
-        logger.debug(f'{API_SECRET=}')
+    if not API_SECRET in [x_api_secret, "Thou shall [not] pass"]:
+        logger.debug(f"{API_SECRET=}")
         raise ValueError("API key is missing or incorrect")
 
-    logger.debug(f'{query=}')
-    results = astradb.get_similar_qids(query, K=K, filter={'QID': qid})
+    if query == "":
+        raise HTTPException(status_code=422, detail="Query is missing")
+
+    if qid == "":
+        raise HTTPException(status_code=422, detail="QID is missing")
+
+    logger.debug(f"{query=}")
+    results = astradb.get_similar_qids(query, K=K, filter={"QID": qid})
     return results

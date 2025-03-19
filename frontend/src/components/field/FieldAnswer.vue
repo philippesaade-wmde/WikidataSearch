@@ -15,8 +15,8 @@
       </template>
 
       <template v-else-if="response?.length">
-        <div 
-          v-for="r in response" 
+        <div
+          v-for="r in response"
           :key="r.QID"
           class="p-4 m-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border
                 hover:shadow-lg hover:bg-light-hover dark:hover:bg-dark-hover transition cursor-pointer"
@@ -44,7 +44,9 @@
       <!-- No Response Message -->
       <template v-else>
         <div class="text-lg text-light-muted dark:text-dark-muted">
-          {{ $t('no-response-message') }}
+          <div v-if="imageUrl" class="flex-shrink-0">
+            <img class="rounded-2xl max-h-32 shadow-md border border-light-border dark:border-dark-border" :src="imageUrl" :alt="altText" />
+          </div>
         </div>
       </template>
     </div>
@@ -52,12 +54,45 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import FieldImage from '../field/FieldImage.vue'
 import type { ResponseObject } from '../../types/response-object.d.ts'
 
-defineProps<{
+const props = defineProps<{
   response?: ResponseObject[]
   isLoading: boolean
 }>()
+
+const response = ref<ResponseObject[]>([])
+
+const fetchWikidataInfo = async () => {
+  if (!props.response || props.response.length === 0) return
+
+  const qids = props.response.map((r) => r.QID).join('|')
+
+  const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&ids=${qids}&props=labels|descriptions|claims&languages=en&origin=*`
+
+  try {
+    const res = await fetch(url)
+    const data = await res.json()
+
+    response.value = props.response.map((r) => {
+      const entity = data.entities[r.QID]
+      return {
+        ...r,
+        label: entity?.labels?.en?.value || 'Unknown',
+        description: entity?.descriptions?.en?.value || 'No description available',
+        imageUrl: entity?.claims?.P18?.[0]?.mainsnak?.datavalue?.value
+          ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(entity.claims.P18[0].mainsnak.datavalue.value)}`
+          : null
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching Wikidata info:', error)
+  }
+}
+
+// Fetch when response changes
+watch(() => props.response, fetchWikidataInfo, { immediate: true })
 </script>

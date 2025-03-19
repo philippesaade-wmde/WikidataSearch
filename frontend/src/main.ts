@@ -10,14 +10,14 @@ const i18n = createI18n({
   fallbackLocale: 'de',
   messages: {
     en: {
-      'chat-prompt': 'Message WikidataChat...',
+      'chat-prompt': 'Search Wikidata...',
       'no-response-message':
         'Sorry, but no valid response was returned for your question. Please try rephrasing it.',
       source: 'Source',
       'enter-api-secret': "Enter your API secret"
     },
     de: {
-      'chat-prompt': 'Schreib WikidataChat...',
+      'chat-prompt': 'Suche in Wikidata...',
       'no-response-message':
         'Leider wurde auf Ihre Frage keine gültige Antwort zurückgegeben. Bitte versuchen Sie es umzuformulieren.',
       source: 'Quelle',
