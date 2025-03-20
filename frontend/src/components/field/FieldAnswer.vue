@@ -35,18 +35,12 @@
               </div>
             </div>
 
-            <!-- Image (Larger) -->
-            <FieldImage :qid="r.QID" />
+            <div class="text-lg text-light-muted dark:text-dark-muted">
+              <div v-if="r.imageUrl" class="flex-shrink-0">
+                <img class="rounded-2xl max-h-32 shadow-md border border-light-border dark:border-dark-border" :src="r.imageUrl" :alt="r.label" />
+              </div>
+            </div>
           </a>
-        </div>
-      </template>
-
-      <!-- No Response Message -->
-      <template v-else>
-        <div class="text-lg text-light-muted dark:text-dark-muted">
-          <div v-if="imageUrl" class="flex-shrink-0">
-            <img class="rounded-2xl max-h-32 shadow-md border border-light-border dark:border-dark-border" :src="imageUrl" :alt="altText" />
-          </div>
         </div>
       </template>
     </div>
@@ -56,7 +50,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import FieldImage from '../field/FieldImage.vue'
 import type { ResponseObject } from '../../types/response-object.d.ts'
 
 const props = defineProps<{

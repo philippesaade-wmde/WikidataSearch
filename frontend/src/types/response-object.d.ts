@@ -3,5 +3,5 @@ export interface ResponseObject {
   similarity_score: number
   label: string
   description: string
-  imageUrl: string
+  imageUrl: string | null
 }
