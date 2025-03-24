@@ -100,7 +100,7 @@ async function search() {
   if (!secret) throw 'API secret not set.'
 
   try {
-    const fetchResult = await fetch(`http://localhost:8000/item/query?query=${inputText.value}`, {
+    const fetchResult = await fetch(`/item/query?query=${inputText.value}`, {
       headers: { 'x-api-secret': secret }
     })
     const jsonResponse = await fetchResult.json()

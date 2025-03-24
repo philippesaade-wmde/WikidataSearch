@@ -72,7 +72,7 @@ function apiSecret() {
 async function validateSecret() {
   errorMessage.value = '' // Clear previous errors
   try {
-    const response = await fetch(`http://localhost:8000/item/query?query=`, {
+    const response = await fetch(`/item/query?query=`, {
       headers: { 'x-api-secret': inputText.value }
     })
     if (response.status === 401) {
