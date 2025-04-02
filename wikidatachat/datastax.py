@@ -1,11 +1,5 @@
 from langchain_astradb import AstraDBVectorStore
 from langchain_core.documents import Document
-import requests
-import time
-
-from .logger import get_logger
-
-logger = get_logger(__name__)
 
 class AstraDBConnect:
     def __init__(self, datastax_tokens, embedding_model):

@@ -119,7 +119,6 @@ async def item_query_route(
         list: A list of dictionaries containing QIDs and the similarity scores.
     """
     if API_SECRET != x_api_secret:
-        logger.debug(f"{API_SECRET=}")
         raise HTTPException(status_code=401,
                             detail="X-API-SECRET incorrect or missing")
 
@@ -182,7 +181,6 @@ async def property_query_route(
         list: A list of dictionaries containing QIDs and the similarity scores.
     """
     if API_SECRET != x_api_secret:
-        logger.debug(f"{API_SECRET=}")
         raise HTTPException(status_code=401,
                             detail="X-API-SECRET incorrect or missing")
 
@@ -247,7 +245,6 @@ async def similarity_score_route(
         list: A sorted list of dictionaries containing QIDs and the similarity scores.
     """
     if API_SECRET != x_api_secret:
-        logger.debug(f"{API_SECRET=}")
         raise HTTPException(status_code=401,
                             detail="X-API-SECRET incorrect or missing")
 
