@@ -1,16 +1,7 @@
-# WikidataChat
+# WikidataSearch
 
 ## Introduction
-WikidataChat is an innovative tool designed to leverage the comprehensive knowledge base of Wikidata, transforming it into a user-friendly question-and-answer chat interface. It aims to provide the general public with validated and cited knowledge directly from Wikidata, reducing the chances of misinformation or "hallucinations" often associated with large language models (LLMs).
-
-## Features
-WikidataChat boasts a unique textification pipeline with the following capabilities:
-- **Search and Download**: Utilizes Google's Serapi search pipeline and Wikidata's REST API to fetch relevant JSON data.
-- **Textification**: Converts Wikidata statements into string statements, preparing them for processing.
-- **RAG Pipeline**: Merges Wikidata string statements with user-provided questions to generate informed and accurate answers through an LLM.
-- **User Interface**: Offers a friendly UI that not only presents answers but also provides linked lists of Wikidata and Wikipedia URLs for further exploration.
-
-![Wikidata and the Meaning of Life](https://github.com/exowanderer/WikidataChat/blob/main/images/wikidatachat_meaning_of_life_example_mar25_2024.png)
+WikidataSearch, a component of WikidataChat, is a web application and API designed to facilitate the connection between users and the Wikidata Vector Database.
 
 ## Getting Started
 
@@ -60,7 +51,19 @@ toolforge build start https://github.com/philippesaade-wmde/WikidataChat.git --r
 4. Start the web service:
 
 ```bash
-webservice buildservice start --mount none
+webservice buildservice start --mount all
+```
+
+5. Debugging the web service:
+
+Read the logs:
+```bash
+webservice logs
+```
+
+Open the service shell:
+```bash
+webservice shell
 ```
 
 ## Contributing
@@ -76,5 +79,3 @@ WikidataChat is open-source software licensed under the MIT License. You are fre
 
 ## Contact
 For questions, comments, or discussions, please open an issue on this GitHub repository. We are committed to fostering a welcoming and collaborative community.
-
-![Wikidata and the Meaning of Life](https://github.com/exowanderer/WikidataChat/blob/main/images/WikidataChat_Meaning_of_Life_Graphic.jpg)
