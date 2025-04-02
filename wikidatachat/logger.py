@@ -1,12 +1,16 @@
 import logging
 import sys
-
+import os
 
 def get_logger(name):
     # Create a logger
     # Source: https://docs.python.org/3/howto/logging.html
+
+    mounted_dir = os.environ.get("TOOL_DATA_DIR", "/")
+    logs_path = os.path.join(mounted_dir, 'wdchat_api.log')
+
     logging.basicConfig(
-        filename='wdchat_api.log',
+        filename=logs_path,
         encoding='utf-8',
         level=logging.DEBUG
     )
