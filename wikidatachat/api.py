@@ -30,15 +30,6 @@ app = FastAPI(
     swagger_ui_parameters={"persistAuthorization": True},
 )
 
-# app.openapi_schema = {
-#     "components": {
-#         "securitySchemes": {
-#             "ApiKeyAuth": {"type": "apiKey", "in": "header", "name": "x-api-secret"}
-#         }
-#     },
-#     "security": [{"ApiKeyAuth": []}],
-# }
-
 # Enable all Cors
 app.add_middleware(
     CORSMiddleware,
@@ -118,7 +109,7 @@ async def item_query_route(
     K: int = 10,
 ):
     """
-    Query the Entities in the Wikidata Vector Database.
+    Query on Wikidata items in the Vector Database.
 
     Args:
         x_api_secret (str): API Secret to confirm user is authorised.
@@ -127,14 +118,16 @@ async def item_query_route(
     Returns:
         list: A list of dictionaries containing QIDs and the similarity scores.
     """
-    if not API_SECRET in [x_api_secret, "Thou shall [not] pass"]:
+    if API_SECRET != x_api_secret:
         logger.debug(f"{API_SECRET=}")
-        raise HTTPException(status_code=401, detail="X-API-SECRET incorrect or missing")
+        raise HTTPException(status_code=401,
+                            detail="X-API-SECRET incorrect or missing")
 
     if query == "":
         raise HTTPException(status_code=422, detail="Query is missing")
 
     logger.debug(f"{query=}")
+
     results = astradb.get_similar_qids(query, K=K, filter={"IsItem": True})
     return results
 
@@ -145,7 +138,12 @@ async def item_query_route(
         200: {
             "description": "Returns a list of relevant Wikidata property PIDs with similarity scores",
             "content": {
-                "application/json": {"example": [{"QID": "P31", "score": 0.89}]}
+                "application/json": {
+                    "example": [{
+                        "QID": "P31",
+                        "similarity_score": 0.89
+                    }]
+                }
             },
         },
         401: {
@@ -159,7 +157,9 @@ async def item_query_route(
         422: {
             "description": "Missing query parameter",
             "content": {
-                "application/json": {"example": {"detail": "Query is missing"}}
+                "application/json": {
+                    "example": {"detail": "Query is missing"}
+                }
             },
         },
     },
@@ -172,7 +172,7 @@ async def property_query_route(
     K: int = 10,
 ):
     """
-    Query the Properties in the Wikidata Vector Database.
+    Query on Wikidata properties in the Vector Database.
 
     Args:
         x_api_secret (str): API Secret to confirm user is authorised.
@@ -181,14 +181,16 @@ async def property_query_route(
     Returns:
         list: A list of dictionaries containing QIDs and the similarity scores.
     """
-    if not API_SECRET in [x_api_secret, "Thou shall [not] pass"]:
+    if API_SECRET != x_api_secret:
         logger.debug(f"{API_SECRET=}")
-        raise ValueError("API key is missing or incorrect")
+        raise HTTPException(status_code=401,
+                            detail="X-API-SECRET incorrect or missing")
 
     if query == "":
         raise HTTPException(status_code=422, detail="Query is missing")
 
     logger.debug(f"{query=}")
+
     results = astradb.get_similar_qids(query, K=K, filter={"IsProperty": True})
     return results
 
@@ -197,9 +199,14 @@ async def property_query_route(
     "/similarity-score/",
     responses={
         200: {
-            "description": "Returns similarity scores for a given query and QID",
+            "description": "Returns a list sorted by similarity scores, for a given query and specified list of Wikidata entities.",
             "content": {
-                "application/json": {"example": [{"QID": "Q2", "score": 0.78}]}
+                "application/json": {
+                    "example": [{
+                        "QID": "Q2",
+                        "similarity_score": 0.78
+                    }]
+                }
             },
         },
         401: {
@@ -211,9 +218,11 @@ async def property_query_route(
             },
         },
         422: {
-            "description": "Missing query or QID parameter",
+            "description": "Missing query or qid parameter",
             "content": {
-                "application/json": {"example": {"detail": "Query or QID is missing"}}
+                "application/json": {
+                    "example": {"detail": "Query or QID is missing"}
+                }
             },
         },
     },
@@ -223,29 +232,42 @@ async def similarity_score_route(
         str, Header(..., required=True, description="API key for authentication")
     ],
     query: str = Query(..., example="testing"),
-    qid: str = Query(..., example="testing QID"),
+    qid: str = Query(..., example="Q42,Q2,Q36153"),
     K: int = 10,
 ):
     """
-    Query the Properties in the Wikidata Vector Database.
+    Get the similarity score for a given query and a specified list of Wikidata entities.
 
     Args:
         x_api_secret (str): API Secret to confirm user is authorised.
         query (str): The query string to be processed.
+        qid (str): A list of QIDs (comma separated) to compare the query to.
 
     Returns:
-        list: A list of dictionaries containing QIDs and the similarity scores.
+        list: A sorted list of dictionaries containing QIDs and the similarity scores.
     """
-    if not API_SECRET in [x_api_secret, "Thou shall [not] pass"]:
+    if API_SECRET != x_api_secret:
         logger.debug(f"{API_SECRET=}")
-        raise ValueError("API key is missing or incorrect")
+        raise HTTPException(status_code=401,
+                            detail="X-API-SECRET incorrect or missing")
 
     if query == "":
         raise HTTPException(status_code=422, detail="Query is missing")
 
     if qid == "":
-        raise HTTPException(status_code=422, detail="QID is missing")
+        raise HTTPException(status_code=422, detail="QIDs are missing")
 
-    logger.debug(f"{query=}")
-    results = astradb.get_similar_qids(query, K=K, filter={"QID": qid})
+    logger.debug(f"{query=} {qid=}")
+
+    qids = qid.split(",")
+    qids = [q.strip() for q in qids]
+
+    results = []
+    for qid in qids:
+        new_result = astradb.get_similar_qids(query, K=K, filter={"QID": qid})
+
+        if len(new_result) > 0:
+            results.append(new_result[0])
+
+    results = sorted(results, key=lambda x: x['similarity_score'], reverse=True)
     return results
