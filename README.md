@@ -1,5 +1,4 @@
 # WikidataChat
-Retrieval Augmented Generation (RAG) with for answering question with the Wikidata REST API
 
 ## Introduction
 WikidataChat is an innovative tool designed to leverage the comprehensive knowledge base of Wikidata, transforming it into a user-friendly question-and-answer chat interface. It aims to provide the general public with validated and cited knowledge directly from Wikidata, reducing the chances of misinformation or "hallucinations" often associated with large language models (LLMs).
@@ -24,29 +23,45 @@ WikidataChat boasts a unique textification pipeline with the following capabilit
 2. Deploy WikidataChat using Docker with the following commands:
 
 ```bash
-DOCKER_BUILDKIT=1 docker build . -t wdchat
+docker build . -t "prototype"
 
-docker run  \
-  --env HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN \
-  --env SERAPI_API_KEY=$SERAPI_API_KEY \
-  --volume "$(pwd)/wikidatachat":/workspace/wikidatachat \
-  --volume wdchat_cache:/root/.cache \
-  --publish 8000:8000 \
-  --rm \
-  --interactive \
-  --tty \
-  --name wdchat \
-  wdchat
+docker run \
+    -v $(pwd)/.env:/workspace/.env \
+    -v "$(pwd)/wikidatachat":/workspace/wikidatachat \
+    -v "$(pwd)/frontend":/workspace/frontend \
+    -p 8000:8000 \
+    -p 5173:5173 \
+    --name "prototype" \
+    --rm \
+    prototype
 ```
 
 This will deploy the UI to `localhost:8000`, allowing local access to the WikidataChat interface.
 
-## Usage
-After installation, access the WikidataChat through your web browser by navigating to `localhost:8000`. If deployed on an internet-accessible server, the interface can be accessed from the respective web address, providing a seamless experience for asking questions and receiving answers.
+### Deploying to Toolforge
+1. Shell into the Toolforge system:
 
-The UI and Haystack functionality were developed with colleagues from Wikimedia Deutschland
-- [Haystack Pipeline: rti](https://github.com/rti/gbnc/)
-- [Vue3 UI: andrewtavis](https://github.com/andrewtavis/gbnc)
+```bash
+ssh [UNIX shell username]@login.toolforge.org
+```
+
+2. Switch to tool user account:
+
+```bash
+become wd-vectordb
+```
+
+3. Build from Git:
+
+```bash
+toolforge build start https://github.com/philippesaade-wmde/WikidataChat.git --ref prototype
+```
+
+4. Start the web service:
+
+```bash
+webservice buildservice start --mount none
+```
 
 ## Contributing
 We welcome contributions from the community. Whether it's features, bug fixes, or documentation, here's how you can help:
