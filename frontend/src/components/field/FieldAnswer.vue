@@ -21,7 +21,7 @@
           class="p-4 m-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border
                 hover:shadow-lg hover:bg-light-hover dark:hover:bg-dark-hover transition cursor-pointer"
         >
-          <a :href="'https://www.wikidata.org/wiki/' + r.QID" class="flex items-center gap-6">
+          <a :href="'https://www.wikidata.org/wiki/' + r.QID" target="_blank" class="flex items-center gap-6">
             <!-- Text Info -->
             <div class="flex-1 space-y-2">
               <div class="text-xl font-semibold">

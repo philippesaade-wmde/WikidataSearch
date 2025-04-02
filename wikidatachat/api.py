@@ -1,19 +1,16 @@
-import os  # Import the os module to interact with the operating system.
-
 from typing import Annotated
+import time
+import os
 
 # Import necessary types and classes from FastAPI and other libraries.
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from .logger import get_logger
+from .logger import Logger
 from .jina import JinaAIAPIEmbedder
 from .datastax import AstraDBConnect
-
-# Create logger instance from base logger config in `logger.py`
-logger = get_logger(__name__)  # Initialize a logger for this module.
 
 # Retrieve the frontend static directory path from environment variables, falling back to a default if not set.
 FRONTEND_STATIC_DIR = os.environ.get("FRONTEND_STATIC_DIR", "./frontend/dist")
@@ -102,6 +99,7 @@ async def favicon():
     },
 )
 async def item_query_route(
+    request: Request,
     x_api_secret: Annotated[
         str, Header(..., required=True, description="API key for authentication")
     ],
@@ -118,17 +116,31 @@ async def item_query_route(
     Returns:
         list: A list of dictionaries containing QIDs and the similarity scores.
     """
+
+    start_time = time.time()
     if API_SECRET != x_api_secret:
-        raise HTTPException(status_code=401,
-                            detail="X-API-SECRET incorrect or missing")
+        response = "X-API-SECRET incorrect or missing"
+        Logger.add_request(request, response, 401, start_time)
+        raise HTTPException(status_code=401, detail=response)
 
-    if query == "":
-        raise HTTPException(status_code=422, detail="Query is missing")
+    if not query:
+        response = "Query is missing"
+        Logger.add_request(request, response, 422, start_time)
+        raise HTTPException(status_code=422, detail=response)
 
-    logger.debug(f"{query=}")
 
-    results = astradb.get_similar_qids(query, K=K, filter={"IsItem": True})
-    return results
+    try:
+        results = astradb.get_similar_qids(
+            query,
+            K=K,
+            filter={"IsItem": True}
+        )
+
+        Logger.add_request(request, results, 200, start_time)
+        return results
+    except Exception as e:
+        Logger.add_request(request, str(e), 500, start_time)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @app.get(
@@ -164,6 +176,7 @@ async def item_query_route(
     },
 )
 async def property_query_route(
+    request: Request,
     x_api_secret: Annotated[
         str, Header(..., required=True, description="API key for authentication")
     ],
@@ -180,17 +193,31 @@ async def property_query_route(
     Returns:
         list: A list of dictionaries containing QIDs and the similarity scores.
     """
+
+    start_time = time.time()
     if API_SECRET != x_api_secret:
-        raise HTTPException(status_code=401,
-                            detail="X-API-SECRET incorrect or missing")
+        response = "X-API-SECRET incorrect or missing"
+        Logger.add_request(request, response, 401, start_time)
+        raise HTTPException(status_code=401, detail=response)
 
-    if query == "":
-        raise HTTPException(status_code=422, detail="Query is missing")
+    if not query:
+        response = "Query is missing"
+        Logger.add_request(request, response, 422, start_time)
+        raise HTTPException(status_code=422, detail=response)
 
-    logger.debug(f"{query=}")
 
-    results = astradb.get_similar_qids(query, K=K, filter={"IsProperty": True})
-    return results
+    try:
+        results = astradb.get_similar_qids(
+            query,
+            K=K,
+            filter={"IsProperty": True}
+        )
+
+        Logger.add_request(request, results, 200, start_time)
+        return results
+    except Exception as e:
+        Logger.add_request(request, str(e), 500, start_time)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @app.get(
@@ -226,6 +253,7 @@ async def property_query_route(
     },
 )
 async def similarity_score_route(
+    request: Request,
     x_api_secret: Annotated[
         str, Header(..., required=True, description="API key for authentication")
     ],
@@ -244,27 +272,46 @@ async def similarity_score_route(
     Returns:
         list: A sorted list of dictionaries containing QIDs and the similarity scores.
     """
+
+    start_time = time.time()
     if API_SECRET != x_api_secret:
-        raise HTTPException(status_code=401,
-                            detail="X-API-SECRET incorrect or missing")
+        response = "X-API-SECRET incorrect or missing"
+        Logger.add_request(request, response, 401, start_time)
+        raise HTTPException(status_code=401, detail=response)
 
-    if query == "":
-        raise HTTPException(status_code=422, detail="Query is missing")
+    if not query:
+        response = "Query is missing"
+        Logger.add_request(request, response, 422, start_time)
+        raise HTTPException(status_code=422, detail=response)
 
-    if qid == "":
-        raise HTTPException(status_code=422, detail="QIDs are missing")
+    if not qid:
+        response = "QIDs are missing"
+        Logger.add_request(request, response, 422, start_time)
+        raise HTTPException(status_code=422, detail=response)
 
-    logger.debug(f"{query=} {qid=}")
+    try:
+        qids = qid.split(",")
+        qids = [q.strip() for q in qids]
 
-    qids = qid.split(",")
-    qids = [q.strip() for q in qids]
+        results = []
+        for qid in qids:
+            new_result = astradb.get_similar_qids(
+                query,
+                K=K,
+                filter={"QID": qid}
+            )
 
-    results = []
-    for qid in qids:
-        new_result = astradb.get_similar_qids(query, K=K, filter={"QID": qid})
+            if len(new_result) > 0:
+                results.append(new_result[0])
 
-        if len(new_result) > 0:
-            results.append(new_result[0])
+        results = sorted(
+            results,
+            key=lambda x: x['similarity_score'],
+            reverse=True
+        )
 
-    results = sorted(results, key=lambda x: x['similarity_score'], reverse=True)
-    return results
+        Logger.add_request(request, results, 200, start_time)
+        return results
+    except Exception as e:
+        Logger.add_request(request, str(e), 500, start_time)
+        raise HTTPException(status_code=500, detail="Internal Server Error")

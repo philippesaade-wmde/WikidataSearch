@@ -1,30 +1,48 @@
-import logging
-import sys
+from sqlalchemy import create_engine, Column, String, Integer, Float, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from datetime import datetime
+import json
+import time
 import os
 
-def get_logger(name):
-    # Create a logger
-    # Source: https://docs.python.org/3/howto/logging.html
+TOOL_DATA_DIR = os.environ.get("TOOL_DATA_DIR", "./")
+DATABASE_URL = os.path.join(TOOL_DATA_DIR, 'sql_logs.db')
+DATABASE_URL = f"sqlite:///{DATABASE_URL}"
+Base = declarative_base()
 
-    mounted_dir = os.environ.get("TOOL_DATA_DIR", "/")
-    logs_path = os.path.join(mounted_dir, 'wdchat_api.log')
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+Session = sessionmaker(bind=engine)
 
-    logging.basicConfig(
-        filename=logs_path,
-        encoding='utf-8',
-        level=logging.DEBUG
-    )
+class Logger(Base):
+    __tablename__ = 'requests'
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    ip = Column(String)
+    route = Column(String)
+    parameters = Column(String)
+    status = Column(Integer)
+    response = Column(String)
+    response_time = Column(Float)
 
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)  # Set the logging level
+    @staticmethod
+    def add_request(request, response, status_code, start_time):
+        with Session() as session:
+            log_entry = Logger(
+                ip=request.client.host,
+                route=request.url.path,
+                parameters=json.dumps(
+                    dict(request.query_params),
+                    separators=(',', ':')
+                ),
+                status=status_code,
+                response=json.dumps(
+                    response,
+                    separators=(',', ':')
+                ),
+                response_time=time.time() - start_time
+            )
+            session.add(log_entry)
+            session.commit()
 
-    # Create console handler and set level to debug
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-    return logger
+Base.metadata.create_all(bind=engine)
