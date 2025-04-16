@@ -52,13 +52,21 @@ class AstraDBConnect:
         """
         results = self.graph_store.similarity_search_with_relevance_scores(
             query,
-            k=K,
+            k=100,
             filter=filter
         )
 
-        seen = set()
-        output = [{
-                'QID': r[0].metadata['QID'],
-                'similarity_score': r[1]
-            } for r in results if r[0].metadata['QID'] not in seen and not seen.add(r[0].metadata['QID'])]
+        seen_qids = set()
+        output = []
+        for r in results:
+            if r[0].metadata['QID'] not in seen_qids:
+                output.append({
+                    'QID': r[0].metadata['QID'],
+                    'similarity_score': r[1]
+                })
+                seen_qids.add(r[0].metadata['QID'])
+
+            if len(seen_qids) >= K:
+                break
+
         return output

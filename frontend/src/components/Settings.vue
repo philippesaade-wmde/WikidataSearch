@@ -12,11 +12,25 @@
       />
     </div>
 
-    <div class="px-24 py-4 pb-24 max-w-3xl">
-      <div class="text-4xl flex py-4">
-        <Icon class="mr-3 mb-4" icon="fluent:settings-24-filled" />
-        Settings
-      </div>
+      <div class="px-24 py-4 pb-24 max-w-4xl">
+        <div class="mb-24 flex items-center gap-6">
+          <a href="https://www.wikidata.org/wiki/Wikidata:Embedding_Project" target="_blank" class="block">
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/0/01/Wikidata_Embedding_Project_Logo.png"
+                alt="Wikidata Embedding Project Logo"
+                class="object-contain"
+              />
+          </a>
+
+            <div>
+              <div class="text-4xl py-2">
+                <a href="https://www.wikidata.org/wiki/Wikidata:Embedding_Project" target="_blank" class="block">Wikidata Embedding Project</a>
+              </div>
+              <div class="text-lg py-2">
+                <a href="https://www.wikidata.org/wiki/Wikidata:Embedding_Project" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">The Wikidata Embedding Project</a> aims to build a vector database on top of Wikidata, enabling semantic search that retrieves items based on the contextual meaning of queries.
+              </div>
+            </div>
+        </div>
 
       <div class="relative flex items-center text-2xl rounded-lg bg-light-menu dark:bg-dark-menu elem-shadow-sm p-2">
         <Icon
@@ -43,10 +57,11 @@
           class="ml-4 px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
           @click="handleEnter"
         >
-          Save
+          Enter
         </button>
       </div>
-      <p v-if="errorMessage" class="text-red-500 mt-2">{{ errorMessage }}</p>
+
+      <p class="text-red-500 mt-2">{{ errorMessage }}&nbsp;</p>
 
       <!-- Partners Section -->
       <div class="mt-12">

@@ -5,17 +5,27 @@
 
     <Icon
       class="text-4xl absolute right-2 top-2 cursor-pointer"
-      icon="fluent:settings-24-filled"
+      icon="fluent:line-horizontal-3-24-filled"
       @click="showSettings = true"
     />
 
     <div class="py-8 space-y-8">
-      <h1
-        class="flex justify-center space-x-3 text-4xl md:text-5xl text-light-text dark:text-dark-text font-display"
-      >
-        <Icon icon="ooui:logo-wikimedia" />
-        <p class="-mt-[0.025em] md:mt-0">Wikidata Search</p>
-      </h1>
+      <div class="mb-12 flex items-center gap-6 justify-center space-x-3 ">
+
+        <a href="https://www.wikidata.org/wiki/Wikidata:Embedding_Project" target="_blank" class="block">
+            <img
+                src="https://upload.wikimedia.org/wikipedia/commons/0/01/Wikidata_Embedding_Project_Logo.png"
+                alt="Wikidata Embedding Project Logo"
+                class="w-24 object-contain"
+              />
+          </a>
+
+        <div>
+          <div class="text-5xl py-2">
+            <a href="https://www.wikidata.org/wiki/Wikidata:Embedding_Project" target="_blank" class="block">Wikidata Embedding Project</a>
+          </div>
+        </div>
+      </div>
 
       <div v-if="!apiSecret()"></div>
       <div v-else>
@@ -47,11 +57,19 @@
                 @click="inputText.length > 0 ? search() : {}"
               />
             </div>
+
+            <div class="text-sm justify-center w-full px-2 py-2">
+              ⚠️ This is a prototype intended for testing purposes. Results may not be accurate or complete. Queries will be stored for up to 90 days for further analysis.
+
+              If you'd like to give us feedback and support us in improving the solution, feel free to fill out <a href="https://wikimedia.sslsurvey.de/Wikidata-Vector-DB-Feedback-Survey-1st-Prototype-" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">our survey</a>.
+            </div>
+
+            <div v-if="error && error.length" class="text-xl font-bold justify-center w-full">
+              {{ error }}
+            </div>
           </div>
         </div>
-        <div v-if="error && error.length" class="flex text-xl font-bold justify-center w-full">
-          {{ error }}
-        </div>
+
         <div v-if="response" class="flex justify-center w-full">
           <div class="flex-col w-[90%] md:w-4/5 lg:w-2/3 space-y-7">
             <FieldAnswer :response="response" :isLoading="false" />
