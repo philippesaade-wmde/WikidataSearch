@@ -56,12 +56,14 @@ class AstraDBConnect:
             filter=filter
         )
 
+        ID_name = 'PID' if filter.get('IsProperty', False) else 'QID'
+
         seen_qids = set()
         output = []
         for r in results:
             if r[0].metadata['QID'] not in seen_qids:
                 output.append({
-                    'QID': r[0].metadata['QID'],
+                    ID_name: r[0].metadata['QID'],
                     'similarity_score': r[1]
                 })
                 seen_qids.add(r[0].metadata['QID'])

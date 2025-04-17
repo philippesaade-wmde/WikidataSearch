@@ -151,7 +151,7 @@ async def item_query_route(
             "content": {
                 "application/json": {
                     "example": [{
-                        "QID": "P31",
+                        "PID": "P31",
                         "similarity_score": 0.89
                     }]
                 }
