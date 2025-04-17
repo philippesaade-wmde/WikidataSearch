@@ -1,6 +1,7 @@
 from typing import Annotated
 import time
 import os
+import traceback
 
 # Import necessary types and classes from FastAPI and other libraries.
 from fastapi.responses import FileResponse
@@ -133,13 +134,14 @@ async def item_query_route(
         results = astradb.get_similar_qids(
             query,
             K=K,
-            filter={"IsItem": True}
+            filter={"metadata.IsItem": True}
         )
 
         Logger.add_request(request, results, 200, start_time)
         return results
     except Exception as e:
         Logger.add_request(request, str(e), 500, start_time)
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
@@ -210,13 +212,14 @@ async def property_query_route(
         results = astradb.get_similar_qids(
             query,
             K=K,
-            filter={"IsProperty": True}
+            filter={"metadata.IsProperty": True}
         )
 
         Logger.add_request(request, results, 200, start_time)
         return results
     except Exception as e:
         Logger.add_request(request, str(e), 500, start_time)
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
@@ -259,7 +262,6 @@ async def similarity_score_route(
     ],
     query: str = Query(..., example="testing"),
     qid: str = Query(..., example="Q42,Q2,Q36153"),
-    K: int = 10,
 ):
     """
     Get the similarity score for a given query and a specified list of Wikidata entities.
@@ -297,8 +299,7 @@ async def similarity_score_route(
         for qid in qids:
             new_result = astradb.get_similar_qids(
                 query,
-                K=K,
-                filter={"QID": qid}
+                filter={"metadata.QID": qid}
             )
 
             if len(new_result) > 0:
@@ -314,4 +315,5 @@ async def similarity_score_route(
         return results
     except Exception as e:
         Logger.add_request(request, str(e), 500, start_time)
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")

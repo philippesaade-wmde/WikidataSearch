@@ -1,4 +1,5 @@
-from langchain_astradb import AstraDBVectorStore
+from astrapy import DataAPIClient
+from astrapy.api_options import APIOptions, TimeoutOptions
 from langchain_core.documents import Document
 
 class AstraDBConnect:
@@ -15,16 +16,19 @@ class AstraDBConnect:
         """
         ASTRA_DB_APPLICATION_TOKEN = datastax_tokens['ASTRA_DB_APPLICATION_TOKEN']
         ASTRA_DB_API_ENDPOINT = datastax_tokens["ASTRA_DB_API_ENDPOINT"]
-        ASTRA_DB_KEYSPACE = datastax_tokens["ASTRA_DB_KEYSPACE"]
         ASTRA_DB_COLLECTION = datastax_tokens["ASTRA_DB_COLLECTION"]
 
-        self.graph_store = AstraDBVectorStore(
-            collection_name=ASTRA_DB_COLLECTION,
-            embedding=embedding_model,
-            token=ASTRA_DB_APPLICATION_TOKEN,
-            api_endpoint=ASTRA_DB_API_ENDPOINT,
-            namespace=ASTRA_DB_KEYSPACE,
+        timeout_options = TimeoutOptions(request_timeout_ms=100000)
+        api_options = APIOptions(timeout_options=timeout_options)
+
+        client = DataAPIClient(
+            ASTRA_DB_APPLICATION_TOKEN,
+            api_options=api_options
         )
+        database0 = client.get_database(ASTRA_DB_API_ENDPOINT)
+        self.wikiDataCollection = database0.get_collection(ASTRA_DB_COLLECTION)
+
+        self.embedding_model = embedding_model
 
     def add_document(self, id, text, metadata):
         """
@@ -50,23 +54,29 @@ class AstraDBConnect:
           where list_of_qids are the QIDs of the results and
           list_of_scores are the corresponding similarity scores.
         """
-        results = self.graph_store.similarity_search_with_relevance_scores(
-            query,
-            k=100,
-            filter=filter
-        )
 
-        ID_name = 'PID' if filter.get('IsProperty', False) else 'QID'
+        embedding = self.embedding_model.embed_query(query)
+        relevant_items = self.wikiDataCollection.find(
+            filter,
+            sort={"$vector": embedding},
+            limit=50,
+            include_similarity=True
+        )
 
         seen_qids = set()
         output = []
-        for r in results:
-            if r[0].metadata['QID'] not in seen_qids:
+        for item in relevant_items:
+            ID = item['metadata']['QID']
+            if ID not in seen_qids:
+
+                ID_name = ID[0]+'ID'
+
                 output.append({
-                    ID_name: r[0].metadata['QID'],
-                    'similarity_score': r[1]
+                    ID_name: ID,
+                    'similarity_score': item['$similarity']
                 })
-                seen_qids.add(r[0].metadata['QID'])
+
+                seen_qids.add(ID)
 
             if len(seen_qids) >= K:
                 break

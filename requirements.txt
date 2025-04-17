@@ -1,6 +1,6 @@
-gunicorn>=23.0.0
-fastapi==0.109.1
-uvicorn==0.27.0
-langchain-astradb==0.3.3
-astrapy==1.5.2
-sqlalchemy==2.0.40
+gunicorn
+fastapi
+uvicorn
+astrapy
+langchain-astradb
+sqlalchemy
