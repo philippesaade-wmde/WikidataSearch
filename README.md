@@ -45,7 +45,7 @@ become wd-vectordb
 3. Build from Git:
 
 ```bash
-toolforge build start https://github.com/philippesaade-wmde/WikidataChat.git --ref prototype
+toolforge build start https://github.com/philippesaade-wmde/WikidataChat.git --ref prototype2
 ```
 
 4. Start the web service:
