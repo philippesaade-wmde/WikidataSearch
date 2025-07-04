@@ -33,6 +33,9 @@
               <div class="text-md text-light-accent dark:text-dark-accent">
                 Similarity Score: {{ r.similarity_score }}
               </div>
+              <div class="text-md text-light-accent dark:text-dark-accent">
+                Source: {{ r.source }}
+              </div>
             </div>
 
             <div class="text-lg text-light-muted dark:text-dark-muted">

@@ -1,6 +1,7 @@
 from astrapy import DataAPIClient
 from astrapy.api_options import APIOptions, TimeoutOptions
-from langchain_core.documents import Document
+import requests
+import re
 
 class AstraDBConnect:
     def __init__(self, datastax_tokens, embedding_model):
@@ -9,10 +10,7 @@ class AstraDBConnect:
 
         Parameters:
         - datastax_token (dict): Credentials for DataStax Astra, including token and API endpoint.
-        - collection_name (str): Name of the collection (table) where data is stored.
-        - model (str): The embedding model to use ("nvidia" or "jina"). Default is 'nvidia'.
-        - batch_size (int): Number of documents to accumulate before pushing to AstraDB. Default is 8.
-        - cache_embeddings (bool): Whether to cache embeddings when using the Jina model. Default is False.
+        - embedding_model (object): The initialised embedding model.
         """
         ASTRA_DB_APPLICATION_TOKEN = datastax_tokens['ASTRA_DB_APPLICATION_TOKEN']
         ASTRA_DB_API_ENDPOINT = datastax_tokens["ASTRA_DB_API_ENDPOINT"]
@@ -30,17 +28,7 @@ class AstraDBConnect:
 
         self.embedding_model = embedding_model
 
-    def add_document(self, id, text, metadata):
-        """
-        Push the current batch of documents to AstraDB for storage.
-
-        Retries automatically if a connection issue occurs, waiting for
-        an active internet connection.
-        """
-        doc = Document(page_content=text, metadata=metadata)
-        self.graph_store.add_documents([doc], ids=[id])
-
-    def get_similar_qids(self, query, filter={}, K=50):
+    def vector_similar_qids(self, query, filter={}, K=50):
         """
         Retrieve similar QIDs for a given query string.
 
@@ -50,9 +38,7 @@ class AstraDBConnect:
         - K (int): Number of top results to return. Default is 50.
 
         Returns:
-        - tuple: (list_of_qids, list_of_scores)
-          where list_of_qids are the QIDs of the results and
-          list_of_scores are the corresponding similarity scores.
+        - list[dict]: where dict countains the QIDs or PIDs of the results and the similarity scores.
         """
 
         embedding = self.embedding_model.embed_query(query)
@@ -82,3 +68,123 @@ class AstraDBConnect:
                 break
 
         return output
+
+    def keyword_similar_qids(self, query, filter={}, K=50):
+        """
+        Retrieve similar QIDs for a given query string.
+
+        Parameters:
+        - query (str): The text query used to find similar documents.
+        - K (int): Number of top results to return. Default is 50.
+
+        Returns:
+        - list[dict]: where dict countains the QIDs or PIDs of the results and the similarity scores.
+        """
+
+        cleaned_query = self._clean_query(query)
+
+        params = {
+            'cirrusDumpResult': '',
+            'search': cleaned_query,
+            'srlimit': K
+        }
+        if filter.get("metadata.IsItem", False):
+            params['ns0'] = 1
+        if filter.get("metadata.IsProperty", False):
+            params['ns120'] = 1
+
+        url = "https://www.wikidata.org/w/index.php"
+        results = requests.get(url, params=params)
+        results = results.json()['__main__']['result']['hits']['hits']
+        qids = [item['_source']['title'] for item in results]
+
+        filter['$or'] = [
+            {'metadata.QID': qid} if qid[0]=='Q' else {'metadata.PID': qid}
+            for qid in qids
+        ]
+
+        # Get vector similarity score of each item and remove items not found in the vector database
+        vector_results = self.vector_similar_qids(query, filter=filter, K=50)
+        vector_results = {
+            item.get('QID') or item.get('PID'): item
+            for item in vector_results
+        }
+
+        # Re-order the results based on keyword search order
+        results = [
+            vector_results[qid] for qid in qids if qid in vector_results
+        ]
+        return results
+
+
+    def _clean_query(self, query):
+        """
+        Remove stop words and split the query into individual terms separated by "OR" for the search.
+
+        Parameters:
+        - query (str): The query string to process.
+
+        Returns:
+        - str: The cleaned query string suitable for searching.
+        """
+        # Remove stopwords
+        query_terms = query.split()
+
+        # Join terms with "OR" for Elasticsearch compatibility
+        cleaned_query = " OR ".join(query_terms)
+        if cleaned_query == "":
+            return "None"
+        return cleaned_query[:300] # Max allowed characters is 300
+
+
+    def reciprocal_rank_fusion(self, results, k=50):
+        """
+        Combines search results into one list with RRF (Reciprocal Rank Fusion).
+
+        Parameters:
+        - results (dict): Dictionary containing lists of results
+        - k (int): Smoothing factor
+
+        Returns:
+        - list[dict]: where dict countains the QIDs or PIDs of the results and the similarity scores.
+        """
+        scores = {}
+
+        for source_name, source_results in results.items():
+
+            for rank, item in enumerate(source_results):
+                ID = item.get('QID') or item.get('PID')
+                ID_name = ID[0]+'ID'
+
+                similarity_score = item.get('similarity_score', 0.0)
+                rrf_score = 1.0 / (k + rank + 1)
+
+                if ID not in scores:
+                    scores[ID] = {
+                        ID_name: ID,
+                        'similarity_score': similarity_score,
+                        'rrf_score': rrf_score,
+                        'source': source_name,
+                        'source_rank': rank
+                    }
+
+                else:
+                    scores[ID]['similarity_score'] = max(
+                        similarity_score,
+                        scores[ID].get('similarity_score', 0)
+                    )
+                    scores[ID]['rrf_score'] += rrf_score
+
+                    if rank < scores[ID]['source_rank']:
+                        scores[ID]['source'] = source_name
+                        scores[ID]['source_rank'] = rank
+
+        for v in scores.values():
+            v.pop('source_rank', None)
+
+        fused_results = sorted(
+            scores.values(),
+            key=lambda x: x['rrf_score'],
+            reverse=True
+        )
+        return fused_results

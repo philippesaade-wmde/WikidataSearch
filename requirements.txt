@@ -4,3 +4,4 @@ uvicorn
 astrapy
 langchain-astradb
 sqlalchemy
+langdetect

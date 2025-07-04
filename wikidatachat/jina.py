@@ -3,10 +3,10 @@ import requests
 import numpy as np
 import base64
 
-class JinaAIAPIEmbedder:
+class JinaAIAPI:
     def __init__(self, api_key, passage_task="retrieval.passage", query_task="retrieval.query", embedding_dim=1024):
         """
-        Initializes the JinaAIEmbedder class.
+        Initializes the JinaAIAPI class.
 
         Parameters:
         - api_key (str): The Jina API key.
@@ -85,3 +85,56 @@ class JinaAIAPIEmbedder:
         """
         embedding = self.api_embed([text], task=self.query_task)[0]
         return embedding
+
+    def api_rerank(self, query, texts):
+        """
+        Generates an embedding for the given text using the Jina Embeddings API.
+
+        Parameters:
+        - text (str): The text to embed.
+        - task (str): The task identifier (e.g., "retrieval.query" or "retrieval.passage").
+
+        Returns:
+        - np.ndarray: The resulting embedding vector as a NumPy array.
+        """
+        url = 'https://api.jina.ai/v1/rerank'
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {self.api_key}'
+        }
+
+        if type(texts) is str:
+            texts = [texts]
+
+        data = {
+            "model": "jina-reranker-v2-base-multilingual",
+            "query": query,
+            "return_documents": False,
+            "documents": texts
+        }
+
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()  # Ensure request was successful
+        response_data = response.json()
+
+        return response_data['results']
+
+    def rerank(self, query: str, docs: List[dict]) -> List[dict]:
+        """
+        Scores a list of documents based on their relevance to the given query.
+
+        Parameters:
+        - query (str): The user's query text.
+        - texts (List[str]): A list of document texts to rank.
+
+        Returns:
+        - List[dict]: A list of relevance scores, each corresponding
+        to one document.
+        """
+        texts = [doc['text'] for doc in docs]
+        scores = self.api_rerank(query, texts)
+        for score in scores:
+            docs[score['index']]['reranker_score'] = score['relevance_score']
+
+        docs.sort(key=lambda x: x['reranker_score'], reverse=True)
+        return docs
