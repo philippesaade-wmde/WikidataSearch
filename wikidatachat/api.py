@@ -317,3 +317,79 @@ async def similarity_score_route(
         Logger.add_request(request, str(e), 500, start_time)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@app.get(
+    "/similarity-score-items/",
+    responses={
+        200: {
+            "description": "Returns the similarity scores of 2 items",
+            "content": {
+                "application/json": {
+                    "example": [{
+                        "similarity_score": 0.78
+                    }]
+                }
+            },
+        },
+        401: {
+            "description": "Invalid API secret",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "X-API-SECRET incorrect or missing"}
+                }
+            },
+        },
+        422: {
+            "description": "Missing qid1 or qid2 parameter",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "QIDs are missing"}
+                }
+            },
+        },
+    },
+)
+async def similarity_score_items_route(
+    request: Request,
+    x_api_secret: Annotated[
+        str, Header(..., required=True, description="API key for authentication")
+    ],
+    qid1: str = Query(..., example="Q2"),
+    qid2: str = Query(..., example="Q42"),
+):
+    """
+    Get the similarity score of 2 Wikidata items.
+
+    Args:
+        x_api_secret (str): API Secret to confirm user is authorised.
+        qid1 (str): The QID of the first item to compare.
+        qid2 (str): The QID of the second item to compare.
+
+    Returns:
+        float: The similarity score between the two items.
+    """
+
+    start_time = time.time()
+    if API_SECRET != x_api_secret:
+        response = "X-API-SECRET incorrect or missing"
+        Logger.add_request(request, response, 401, start_time)
+        raise HTTPException(status_code=401, detail=response)
+
+    if not qid1 or not qid2:
+        response = "QIDs are missing"
+        Logger.add_request(request, response, 422, start_time)
+        raise HTTPException(status_code=422, detail=response)
+
+    try:
+        score = astradb.get_similarity_score_of_qids(
+            qid1, qid2
+        )
+
+        Logger.add_request(request, score, 200, start_time)
+
+        return [{"similarity_score": score}]
+    except Exception as e:
+        Logger.add_request(request, str(e), 500, start_time)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Internal Server Error")

@@ -1,6 +1,7 @@
 from astrapy import DataAPIClient
 from astrapy.api_options import APIOptions, TimeoutOptions
 from langchain_core.documents import Document
+import numpy as np
 
 class AstraDBConnect:
     def __init__(self, datastax_tokens, embedding_model):
@@ -82,3 +83,31 @@ class AstraDBConnect:
                 break
 
         return output
+
+
+    def get_similarity_score_of_qids(self, qid1, qid2):
+        """
+        Retrieve the similar score of 2 QIDs.
+
+        Parameters:
+        - qid1 (str): The QID of the first item.
+        - qid2 (str): The QID of the second item.
+
+        Returns:
+        - float: The similarity score between the two QIDs.
+        """
+
+        doc1 = self.wikiDataCollection.find_one(
+            {"metadata.QID": qid1, "metadata.ChunkID": 1},
+            projection=["$vector"]
+        )
+        doc2 = self.wikiDataCollection.find_one(
+            {"metadata.QID": qid2, "metadata.ChunkID": 1},
+            projection=["$vector"]
+        )
+
+        v1 = np.array(doc1["$vector"].data)
+        v2 = np.array(doc2["$vector"].data)
+
+        similarity_score = np.dot(v1, v2)
+        return similarity_score
