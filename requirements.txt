@@ -4,4 +4,3 @@ uvicorn
 astrapy
 langchain-astradb
 sqlalchemy
-numpy
