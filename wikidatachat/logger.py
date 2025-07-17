@@ -6,7 +6,7 @@ import json
 import time
 import os
 
-TOOL_DATA_DIR = os.environ.get("TOOL_DATA_DIR", "./")
+TOOL_DATA_DIR = os.environ.get("TOOL_DATA_DIR", "./data")
 DATABASE_URL = os.path.join(TOOL_DATA_DIR, 'sql_logs.db')
 DATABASE_URL = f"sqlite:///{DATABASE_URL}"
 Base = declarative_base()

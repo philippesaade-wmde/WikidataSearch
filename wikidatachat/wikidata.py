@@ -1,307 +1,508 @@
-import requests
-import re
+from sqlalchemy import Column, Text, create_engine, text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.types import TypeDecorator
 from datetime import date, datetime
+import json
+import re
+import requests
+import os
 
-def get_text_by_id(id, lang='en'):
-    """
-    Fetches a Wikidata entity by its ID and returns its text representation.
+"""
+SQLite database setup for storing Wikidata labels in all languages.
+"""
+TOOL_DATA_DIR = os.environ.get("TOOL_DATA_DIR", "./data")
+DATABASE_URL = os.path.join(TOOL_DATA_DIR, 'sqlite_wikidata_labels.db')
+engine = create_engine(f'sqlite:///{DATABASE_URL}',
+    pool_size=5,  # Limit the number of open connections
+    max_overflow=10,  # Allow extra connections beyond pool_size
+    pool_recycle=10  # Recycle connections every 10 seconds
+)
 
-    Args:
-        id (str): The Wikidata entity ID (e.g., 'Q42').
-        lang (str): The language code for labels and descriptions.
-        props (str): Properties to fetch from the entity.
+Base = declarative_base()
+Session = sessionmaker(bind=engine)
 
-    Returns:
-        dict: A dictionary containing the entity's text representation.
-    """
-    entities = get_wikidata_entities_by_ids(id,
-                                            lang=lang,
-                                            props='labels|descriptions|aliases|claims')
-    if id not in entities:
-        return ''
+class JSONType(TypeDecorator):
+    """Custom SQLAlchemy type for JSON storage in SQLite."""
+    impl = Text
+    cache_ok = False
 
-    entity = clean_wikidata_entity(entities[id], lang=lang)
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            return json.dumps(value, separators=(',', ':'))
+        return None
 
-    text = entity['label']
-    if len(entity['description']) > 0:
-        text += f", {entity['description']}"
-    if len(entity['aliases']) > 0:
-        text += f", also known as {', '.join(entity['aliases'])}"
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            return json.loads(value)
+        return None
 
-    if len(entity['claims']) > 0:
-        properties_text = properties_to_text(entity['claims'])
-        text = f"{text}. Attributes include: {properties_text}"
-    else:
-        text = f"{text}."
+class WikidataLabel(Base):
+    __tablename__ = 'item'
+    id = Column(Text, primary_key=True)
+    labels = Column(JSONType)
 
-    return text
+    @staticmethod
+    def add_bulk_labels(data):
+        """
+        Insert multiple label records in bulk. If a record with the same ID exists, it is ignored (no update is performed).
 
-def qualifiers_to_text(qualifiers):
-    """
-    Converts a list of qualifiers to a readable text string.
-    Qualifiers provide additional information about a claim.
+        Parameters:
+        - data (list[dict]): A list of dictionaries, each containing 'id', 'labels' keys.
 
-    Parameters:
-    - qualifiers: A dictionary of qualifiers with property IDs as keys and their values as lists.
+        Returns:
+        - bool: True if the operation was successful, False otherwise.
+        """
+        with Session() as session:
+            try:
+                session.execute(text('''
+                    INSERT INTO wikidata_item (id, labels)
+                    VALUES (:id, :labels)
+                    ON CONFLICT(id) DO NOTHING
+                '''), data)
 
-    Returns:
-    - A string representation of the qualifiers.
-    """
-    text = ""
-    for claim in qualifiers:
-        property_label = claim['property-label']
-        qualifier_values = claim['values']
-        if (qualifier_values is not None) and len(qualifier_values) > 0:
-            if len(text) > 0:
-                text += f" "
+                session.commit()
+                return True
+            except Exception as e:
+                session.rollback()
+                print(f"Error: {e}")
+                return False
 
-            text += f"({property_label}: {', '.join(qualifier_values)})"
+    @staticmethod
+    def add_label(id, labels):
+        """
+        Insert a labels and descriptions into the database.
 
+        Parameters:
+        - id (str): The unique identifier for the entity.
+        - labels (dict): A dictionary of labels (e.g. { "en": "Label in English", "fr": "Label in French", ... }).
+
+        Returns:
+        - bool: True if the operation was successful, False otherwise.
+        """
+        with Session() as session:
+            try:
+                new_entry = WikidataLabel(
+                    id=id,
+                    labels=labels
+                )
+                session.add(new_entry)
+                session.commit()
+                return True
+            except Exception as e:
+                session.rollback()
+                print(f"Error: {e}")
+                return False
+
+    @staticmethod
+    def get_labels(id):
+        """
+        Retrieve labels and descriptions for a given entity by its ID.
+
+        Parameters:
+        - id (str): The unique identifier of the entity.
+
+        Returns:
+        - dict: The labels dictionary if found, otherwise an empty dict.
+        """
+        with Session() as session:
+            item = session.query(WikidataLabel).filter_by(id=id).first()
+            if item is not None:
+                return item.labels
+            return {}
+
+    @staticmethod
+    def get_bulk_labels(ids):
+        """
+        Retrieve labels for multiple entities by their IDs.
+
+        Parameters:
+        - ids (list[str]): A list of entity IDs to retrieve.
+
+        Returns:
+        - dict[str, dict]: A dictionary mapping each ID to its labels.
+        """
+        if not ids:
+            return {}
+
+        with Session() as session:
+            rows = session.query(WikidataLabel.id, WikidataLabel.labels).filter(WikidataLabel.id.in_(ids)).all()
+            return {id: labels for id, labels in rows}
+
+class WikidataTextifier:
+
+    @staticmethod
+    def get_text_by_id(id, lang='en'):
+        """
+        Fetches a Wikidata entity by its ID and returns its text representation.
+        Parameters:
+        - id (str): The Wikidata entity ID (e.g., Q42, P31).
+        - lang (str): The language code for the text representation.
+
+        Returns:
+        - dict[str, dict]: A dictionary mapping each ID to its text representation.
+        """
+        entities = WikidataTextifier.get_wikidata_entities_by_ids(id,
+                                                lang=lang,
+                                                props='labels|descriptions|aliases|claims')
+        if id not in entities:
+            return ''
+
+        entity = WikidataTextifier.clean_wikidata_entity(entities[id], lang=lang)
+
+        text = entity['label']
+        if len(entity['description']) > 0:
+            text += f", {entity['description']}"
+        if len(entity['aliases']) > 0:
+            text += f", also known as {', '.join(entity['aliases'])}"
+
+        if len(entity['claims']) > 0:
+            properties_text = WikidataTextifier.properties_to_text(
+                entity['claims']
+            )
+            text = f"{text}. Attributes include: {properties_text}"
         else:
-            text += f"(has {property_label})"
+            text = f"{text}."
 
-    if len(text) > 0:
-        return f" {text}"
-    return ""
+        return text
 
-def properties_to_text(properties):
-    """
-    Converts a list of properties (claims) to a readable text string.
+    @staticmethod
+    def qualifiers_to_text(qualifiers):
+        """
+        Converts a list of qualifiers to a readable text string.
+        Qualifiers provide additional information about a claim.
 
-    Parameters:
-    - properties: A dictionary of properties (claims) with property IDs as keys.
+        Parameters:
+        - qualifiers: A dictionary of qualifiers with property IDs as keys and their values as lists.
 
-    Returns:
-    - A string representation of the properties and their values.
-    """
-    properties_text = ""
-    for claim in properties:
-        property_label = claim['property-label']
-        claim_values = claim['values']
-        if (claim_values is not None) and (len(claim_values) > 0):
+        Returns:
+        - A string representation of the qualifiers.
+        """
+        text = ""
+        for claim in qualifiers:
+            property_label = claim['property-label']
+            qualifier_values = claim['values']
+            if (qualifier_values is not None) and len(qualifier_values) > 0:
+                if len(text) > 0:
+                    text += f" "
 
-            claims_text = ""
-            for claim_value in claim_values:
-                if len(claims_text) > 0:
-                    claims_text += f", "
+                text += f"({property_label}: {', '.join(qualifier_values)})"
 
-                claims_text += claim_value['value']
+            else:
+                text += f"(has {property_label})"
 
-                qualifiers = claim_value.get('qualifiers', [])
-                if len(qualifiers) > 0:
-                    claims_text += qualifiers_to_text(qualifiers)
+        if len(text) > 0:
+            return f" {text}"
+        return ""
 
-            properties_text += f'\n- {property_label}: {claims_text}.'
+    @staticmethod
+    def properties_to_text(properties):
+        """
+        Converts a list of properties (claims) to a readable text string.
 
-        else:
-            properties_text += f'\n- has {property_label}.'
+        Parameters:
+        - properties: A dictionary of properties (claims) with property IDs as keys.
 
-    return properties_text
+        Returns:
+        - A string representation of the properties and their values.
+        """
+        properties_text = ""
+        for claim in properties:
+            property_label = claim['property-label']
+            claim_values = claim['values']
+            if (claim_values is not None) and (len(claim_values) > 0):
 
-def get_wikidata_entities_by_ids(
-        ids,
-        lang='en',
-        props='labels|descriptions|aliases|claims'
-    ):
+                claims_text = ""
+                for claim_value in claim_values:
+                    if len(claims_text) > 0:
+                        claims_text += f", "
 
-    if isinstance(ids, str):
-        ids = ids.split('|')
-    ids = list(set(ids)) # Ensure unique IDs
+                    claims_text += claim_value['value']
 
-    entities_data = {}
+                    qualifiers = claim_value.get('qualifiers', [])
+                    if len(qualifiers) > 0:
+                        claims_text += WikidataTextifier.qualifiers_to_text(qualifiers)
 
-    # Wikidata API has a limit on the number of IDs per request, typically 50 for wbgetentities.
-    for chunk_idx in range(0, len(ids), 50):
+                properties_text += f'\n- {property_label}: {claims_text}.'
 
-        ids_chunk = ids[chunk_idx:chunk_idx+50]
-        params = {
-            'action': 'wbgetentities',
-            'ids': "|".join(ids_chunk),
-            'props': props,
-            'languages': f'{lang}|mul',
-            'format': 'json',
-            'origin': '*',
+            else:
+                properties_text += f'\n- has {property_label}.'
+
+        return properties_text
+
+    @staticmethod
+    def get_wikidata_entities_by_ids(
+            ids,
+            lang='en',
+            props='labels|descriptions|aliases|claims'
+        ):
+        """
+        Fetches Wikidata entities by their IDs and returns a dictionary of entities.
+
+        Parameters:
+        - ids (list[str] or str): A list of Wikidata entity IDs (e.g., Q42, P31) or a single ID as a string.
+        - lang (str): The language code for the labels (default is 'en').
+        - props (str): The properties to retrieve (default is 'labels|descriptions|aliases|claims').
+
+        Returns:
+        - dict: A dictionary containing the entities, where keys are entity IDs and values are dictionaries of properties.
+        """
+
+        if isinstance(ids, str):
+            ids = ids.split('|')
+        ids = list(set(ids)) # Ensure unique IDs
+
+        entities_data = {}
+
+        # Wikidata API has a limit on the number of IDs per request, typically 50 for wbgetentities.
+        for chunk_idx in range(0, len(ids), 50):
+
+            ids_chunk = ids[chunk_idx:chunk_idx+50]
+            params = {
+                'action': 'wbgetentities',
+                'ids': "|".join(ids_chunk),
+                'props': props,
+                'languages': f'{lang}|mul',
+                'format': 'json',
+                'origin': '*',
+            }
+            headers = {
+                'User-Agent': 'Wikidata Vector Database'
+            }
+
+            response = requests.get(
+                "https://www.wikidata.org/w/api.php?",
+                params=params,
+                headers=headers
+            )
+            response.raise_for_status()
+            chunk_data = response.json().get("entities", {})
+            entities_data = entities_data | chunk_data
+
+        return entities_data
+
+    @staticmethod
+    def get_wikidata_labels_by_ids(ids, lang='en'):
+        """
+        Fetches labels for multiple Wikidata entities by their IDs.
+
+        Parameters:
+        - ids (list[str]): A list of Wikidata entity IDs (e.g., Q42, P31).
+        - lang (str): The language code for the labels (default is 'en').
+
+        Returns:
+        - dict[str, str]: A dictionary mapping each ID to its label in the specified language.
+        """
+        labels = WikidataLabel.get_bulk_labels(ids)
+        missing_ids = set(ids) - set(labels.keys())
+        if len(missing_ids) > 0:
+            missing_labels = WikidataTextifier.get_wikidata_entities_by_ids(
+                missing_ids, lang=lang, props='labels'
+            )
+            missing_labels = {
+                key: val['labels'] for key, val in missing_labels.items()
+            }
+            labels = labels | missing_labels
+
+        labels = {key: WikidataTextifier._lang_val(val, lang) \
+                for key, val in labels.items()}
+        return labels
+
+    @staticmethod
+    def clean_wikidata_entity(entity, lang='en'):
+        """
+        Cleans a Wikidata entity by removing unnecessary fields and formatting the claims.
+
+        Parameters:
+        - entity (dict): The Wikidata entity to clean.
+        - lang (str): The language code for the labels (default is 'en').
+
+        Returns:
+        - dict: A cleaned version of the entity with only relevant fields.
+        """
+        ids = WikidataTextifier._get_all_missing_labels_ids(entity['claims'])
+        labels = WikidataTextifier.get_wikidata_labels_by_ids(ids, lang=lang)
+
+        clean_claims = WikidataTextifier._claims_to_json(entity['claims'], labels=labels, lang=lang)
+
+        clean_entity = {
+            'id': entity['id'],
+            'label': WikidataTextifier._lang_val(entity['labels'], lang),
+            'description': WikidataTextifier._lang_val(entity['descriptions'], lang),
+            'aliases': entity['aliases'],
+            'claims': clean_claims
         }
-        response = requests.get(
-            "https://www.wikidata.org/w/api.php?",
-            params=params
-        )
-        response.raise_for_status()
-        chunk_data = response.json().get("entities", {})
-        entities_data = entities_data | chunk_data
 
-    return entities_data
+        return clean_entity
 
-def clean_wikidata_entity(entity, lang='en'):
+    @staticmethod
+    def _lang_val(data, lang='en'):
+        """
+        Extracts the value for a given language from a dictionary of labels.
+        """
+        label = data.get(lang, data.get('mul', {}))
+        if isinstance(label, str):
+            return label
+        return label.get('value', '')
 
-    # Get a list of all IDs in the entity and match them with their labels
-    ids = _get_all_missing_labels_ids(entity['claims'])
-    labels = get_wikidata_entities_by_ids(ids, props='labels', lang=lang)
-    labels = {key: _lang_val(val['labels'], lang) \
-              for key, val in labels.items()}
+    @staticmethod
+    def _get_all_missing_labels_ids(data):
+        """
+        Get the IDs of the entity dictionary where their labels are missing.
 
-    clean_claims = _claims_to_json(entity['claims'], labels=labels, lang=lang)
+        Parameters:
+        - data (dict or list): The data structure to search for missing labels.
 
-    clean_entity = {
-        'id': entity['id'],
-        'label': _lang_val(entity['labels'], lang),
-        'description': _lang_val(entity['descriptions'], lang),
-        'aliases': entity['aliases'],
-        'claims': clean_claims
-    }
+        Returns:
+        - set: A set of IDs that are missing labels.
+        """
+        ids_list = set()
 
-    return clean_entity
+        if isinstance(data, dict):
+            if 'property' in data:
+                ids_list.add(data['property'])
+            if ('unit' in data) and (data['unit'] != '1'):
+                ids_list.add(data['unit'].split('/')[-1])
+            if ('datatype' in data) and \
+                ('datavalue' in data) and \
+                (data['datatype'] in ['wikibase-item', 'wikibase-property']):
+                ids_list.add(data['datavalue']['value']['id'])
 
-def _lang_val(data, lang='en'):
-    return data.get(lang, data.get('mul', {})).get('value')
+            for _, value in data.items():
+                ids_list = ids_list | WikidataTextifier._get_all_missing_labels_ids(value)
 
-def _get_all_missing_labels_ids(data):
-    """Get the IDs of the entity dictionary where their labels are missing.
+        elif isinstance(data, list):
+            for item in data:
+                ids_list = ids_list | WikidataTextifier._get_all_missing_labels_ids(item)
 
-    Args:
-        data (dict or list): The data structure to search for IDs.
+        return ids_list
 
-    Returns:
-        list: The list of IDs
-    """
-    ids_list = set()
+    @staticmethod
+    def _time_to_text(time_data):
+        """
+        Converts Wikidata time data into a human-readable string.
 
-    if isinstance(data, dict):
-        if 'property' in data:
-            ids_list.add(data['property'])
-        if ('unit' in data) and (data['unit'] != '1'):
-            ids_list.add(data['unit'].split('/')[-1])
-        if ('datatype' in data) and \
-            ('datavalue' in data) and \
-            (data['datatype'] in ['wikibase-item', 'wikibase-property']):
-            ids_list.add(data['datavalue']['value']['id'])
+        Parameters:
+        - time_data (dict): A dictionary containing the time string, precision, and calendar model.
 
-        for _, value in data.items():
-            ids_list = ids_list | _get_all_missing_labels_ids(value)
+        Returns:
+        - str: A textual representation of the time with appropriate granularity.
+        """
+        if time_data is None:
+            return None
 
-    elif isinstance(data, list):
-        for item in data:
-            ids_list = ids_list | _get_all_missing_labels_ids(item)
+        time_value = time_data['time']
+        precision = time_data['precision']
+        calendarmodel = time_data.get('calendarmodel', 'http://www.wikidata.org/entity/Q1985786')
 
-    return ids_list
+        # Use regex to parse the time string
+        pattern = r'([+-])(\d{1,16})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z'
+        match = re.match(pattern, time_value)
 
-def _time_to_text(time_data):
-    """
-    Converts Wikidata time data into a human-readable string.
+        if not match:
+            raise ValueError("Malformed time string")
 
-    Parameters:
-    - time_data (dict): A dictionary containing the time string, precision, and calendar model.
+        sign, year_str, month_str, day_str, hour_str, minute_str, second_str = match.groups()
+        year = int(year_str) * (1 if sign == '+' else -1)
 
-    Returns:
-    - str: A textual representation of the time with appropriate granularity.
-    """
-    if time_data is None:
-        return None
+        # Convert Julian to Gregorian if necessary
+        if 'Q1985786' in calendarmodel and year > 1 and len(str(abs(year))) <= 4:  # Julian calendar
+            try:
+                month = 1 if month_str == '00' else int(month_str)
+                day = 1 if day_str == '00' else int(day_str)
+                julian_date = date(year, month, day)
+                gregorian_ordinal = julian_date.toordinal() + (datetime(1582, 10, 15).toordinal() - datetime(1582, 10, 5).toordinal())
+                gregorian_date = date.fromordinal(gregorian_ordinal)
+                year, month, day = gregorian_date.year, gregorian_date.month, gregorian_date.day
+            except ValueError:
+                raise ValueError("Invalid date for Julian calendar")
+        else:
+            month = int(month_str) if month_str != '00' else 1
+            day = int(day_str) if day_str != '00' else 1
 
-    time_value = time_data['time']
-    precision = time_data['precision']
-    calendarmodel = time_data.get('calendarmodel', 'http://www.wikidata.org/entity/Q1985786')
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        month_str = months[month - 1] if month != 0 else ''
+        era = 'AD' if year > 0 else 'BC'
 
-    # Use regex to parse the time string
-    pattern = r'([+-])(\d{1,16})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z'
-    match = re.match(pattern, time_value)
+        if precision == 14:
+            return f"{year} {month_str} {day} {hour_str}:{minute_str}:{second_str}"
+        elif precision == 13:
+            return f"{year} {month_str} {day} {hour_str}:{minute_str}"
+        elif precision == 12:
+            return f"{year} {month_str} {day} {hour_str}:00"
+        elif precision == 11:
+            return f"{day} {month_str} {year}"
+        elif precision == 10:
+            return f"{month_str} {year}"
+        elif precision == 9:
+            return f"{abs(year)} {era}"
+        elif precision == 8:
+            decade = (year // 10) * 10
+            return f"{abs(decade)}s {era}"
+        elif precision == 7:
+            century = (abs(year) - 1) // 100 + 1
+            return f"{century}th century {era}"
+        elif precision == 6:
+            millennium = (abs(year) - 1) // 1000 + 1
+            return f"{millennium}th millennium {era}"
+        elif precision == 5:
+            tens_of_thousands = abs(year) // 10000
+            return f"{tens_of_thousands} ten thousand years {era}"
+        elif precision == 4:
+            hundreds_of_thousands = abs(year) // 100000
+            return f"{hundreds_of_thousands} hundred thousand years {era}"
+        elif precision == 3:
+            millions = abs(year) // 1000000
+            return f"{millions} million years {era}"
+        elif precision == 2:
+            tens_of_millions = abs(year) // 10000000
+            return f"{tens_of_millions} tens of millions of years {era}"
+        elif precision == 1:
+            hundreds_of_millions = abs(year) // 100000000
+            return f"{hundreds_of_millions} hundred million years {era}"
+        elif precision == 0:
+            billions = abs(year) // 1000000000
+            return f"{billions} billion years {era}"
+        else:
+            raise ValueError(f"Unknown precision value {precision}")
 
-    if not match:
-        raise ValueError("Malformed time string")
+    @staticmethod
+    def _quantity_to_text(quantity_data, labels={}):
+        """
+        Converts Wikidata quantity data into a human-readable string.
 
-    sign, year_str, month_str, day_str, hour_str, minute_str, second_str = match.groups()
-    year = int(year_str) * (1 if sign == '+' else -1)
+        Parameters:
+        - quantity_data (dict): A dictionary with 'amount' and optionally 'unit' (often a QID).
 
-    # Convert Julian to Gregorian if necessary
-    if 'Q1985786' in calendarmodel and year > 1 and len(str(abs(year))) <= 4:  # Julian calendar
-        try:
-            month = 1 if month_str == '00' else int(month_str)
-            day = 1 if day_str == '00' else int(day_str)
-            julian_date = date(year, month, day)
-            gregorian_ordinal = julian_date.toordinal() + (datetime(1582, 10, 15).toordinal() - datetime(1582, 10, 5).toordinal())
-            gregorian_date = date.fromordinal(gregorian_ordinal)
-            year, month, day = gregorian_date.year, gregorian_date.month, gregorian_date.day
-        except ValueError:
-            raise ValueError("Invalid date for Julian calendar")
-    else:
-        month = int(month_str) if month_str != '00' else 1
-        day = int(day_str) if day_str != '00' else 1
+        Returns:
+        - str: A textual representation of the quantity (e.g., "5 kg").
+        """
+        if quantity_data is None:
+            return None
 
-    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    month_str = months[month - 1] if month != 0 else ''
-    era = 'AD' if year > 0 else 'BC'
+        quantity = quantity_data.get('amount')
+        unit = quantity_data.get('unit')
 
-    if precision == 14:
-        return f"{year} {month_str} {day} {hour_str}:{minute_str}:{second_str}"
-    elif precision == 13:
-        return f"{year} {month_str} {day} {hour_str}:{minute_str}"
-    elif precision == 12:
-        return f"{year} {month_str} {day} {hour_str}:00"
-    elif precision == 11:
-        return f"{day} {month_str} {year}"
-    elif precision == 10:
-        return f"{month_str} {year}"
-    elif precision == 9:
-        return f"{abs(year)} {era}"
-    elif precision == 8:
-        decade = (year // 10) * 10
-        return f"{abs(decade)}s {era}"
-    elif precision == 7:
-        century = (abs(year) - 1) // 100 + 1
-        return f"{century}th century {era}"
-    elif precision == 6:
-        millennium = (abs(year) - 1) // 1000 + 1
-        return f"{millennium}th millennium {era}"
-    elif precision == 5:
-        tens_of_thousands = abs(year) // 10000
-        return f"{tens_of_thousands} ten thousand years {era}"
-    elif precision == 4:
-        hundreds_of_thousands = abs(year) // 100000
-        return f"{hundreds_of_thousands} hundred thousand years {era}"
-    elif precision == 3:
-        millions = abs(year) // 1000000
-        return f"{millions} million years {era}"
-    elif precision == 2:
-        tens_of_millions = abs(year) // 10000000
-        return f"{tens_of_millions} tens of millions of years {era}"
-    elif precision == 1:
-        hundreds_of_millions = abs(year) // 100000000
-        return f"{hundreds_of_millions} hundred million years {era}"
-    elif precision == 0:
-        billions = abs(year) // 1000000000
-        return f"{billions} billion years {era}"
-    else:
-        raise ValueError(f"Unknown precision value {precision}")
+        # 'unit' of '1' means that the value is a count and doesn't require a unit.
+        if unit == '1':
+            unit = None
+        else:
+            unit_qid = unit.rsplit('/')[-1]
+            unit = labels.get(unit_qid)
 
-def _quantity_to_text(quantity_data, labels={}):
-    """
-    Converts Wikidata quantity data into a human-readable string.
+        return quantity + (f" {unit}" if unit else "")
 
-    Parameters:
-    - quantity_data (dict): A dictionary with 'amount' and optionally 'unit' (often a QID).
-
-    Returns:
-    - str: A textual representation of the quantity (e.g., "5 kg").
-    """
-    if quantity_data is None:
-        return None
-
-    quantity = quantity_data.get('amount')
-    unit = quantity_data.get('unit')
-
-    # 'unit' of '1' means that the value is a count and doesn't require a unit.
-    if unit == '1':
-        unit = None
-    else:
-        unit_qid = unit.rsplit('/')[-1]
-        unit = labels.get(unit_qid)
-
-    return quantity + (f" {unit}" if unit else "")
-
-def _globalcoordinate_to_text(coor_data):
+    @staticmethod
+    def _globalcoordinate_to_text(coor_data):
         """
         Convert a single decimal degree value to DMS with hemisphere suffix.
         `hemi_pair` is ("N", "S") for latitude or ("E", "W") for longitude.
+
+        Parameters:
+        - coor_data (dict): A dictionary with 'latitude' and 'longitude' keys
+
+        Returns:
+        - str: A string representation of the coordinates in DMS format.
         """
 
         latitude = abs(coor_data['latitude'])
@@ -334,7 +535,8 @@ def _globalcoordinate_to_text(coor_data):
 
         return f'{lat_str}, {lon_str}'
 
-def _mainsnak_to_value(mainsnak, labels={}, lang='en'):
+    @staticmethod
+    def _mainsnak_to_value(mainsnak, labels={}, lang='en'):
         """
         Converts a Wikidata 'mainsnak' object into a human-readable value string. This method interprets various datatypes (e.g., wikibase-item, string, time, quantity) and returns a formatted text representation.
 
@@ -359,17 +561,9 @@ def _mainsnak_to_value(mainsnak, labels={}, lang='en'):
             return None
 
         elif (mainsnak.get('datatype', '') == 'wikibase-item'):
-            # return {
-            #     'QID': datavalue['id'],
-            #     'label': labels.get(datavalue['id'])
-            # }
             return labels.get(datavalue['id'])
 
         elif (mainsnak.get('datatype', '') == 'wikibase-property'):
-            # return {
-            #     'PID': datavalue['id'],
-            #     'label': labels.get(datavalue['id'])
-            # }
             return labels.get(datavalue['id'])
 
         elif mainsnak.get('datatype', '') == 'monolingualtext':
@@ -377,21 +571,21 @@ def _mainsnak_to_value(mainsnak, labels={}, lang='en'):
 
         elif mainsnak.get('datatype', '') == 'time':
             try:
-                return _time_to_text(datavalue)
+                return WikidataTextifier._time_to_text(datavalue)
             except Exception as e:
                 print("Error in time formating:", e)
                 return datavalue["time"]
 
         elif mainsnak.get('datatype', '') == 'quantity':
             try:
-                return _quantity_to_text(datavalue, labels)
+                return WikidataTextifier._quantity_to_text(datavalue, labels)
             except Exception as e:
                 print("Error in quantity formating:", e)
                 return datavalue['amount']
 
         elif mainsnak.get('datatype', '') == 'globe-coordinate':
             try:
-                return _globalcoordinate_to_text(datavalue)
+                return WikidataTextifier._globalcoordinate_to_text(datavalue)
             except Exception as e:
                 print("Error in global coordinates formating:", e)
                 return ''
@@ -403,84 +597,85 @@ def _mainsnak_to_value(mainsnak, labels={}, lang='en'):
         else:
             return datavalue
 
-def _qualifiers_to_json(qualifiers, labels={}, lang='en'):
-    """
-    Converts qualifiers into a JSON list suitable for text generation.
+    @staticmethod
+    def _qualifiers_to_json(qualifiers, labels={}, lang='en'):
+        """
+        Converts qualifiers into a JSON list suitable for text generation.
 
-    Parameters:
-    - qualifiers (dict): A dictionary of qualifiers keyed by property IDs.
-                            Each value is a list of qualifier statements.
+        Parameters:
+        - qualifiers (dict): A dictionary of qualifiers keyed by property IDs.
+                                Each value is a list of qualifier statements.
 
-    Returns:
-    - list: A list of dictionaries with property labels with lists of their parsed values.
-    """
-    qualifier_list = []
-    for pid, qualifier in qualifiers.items():
-        q_value_data = []
-        for q in qualifier:
-            value = _mainsnak_to_value(q, labels, lang)
-            if value is not None:
-                q_value_data.append(value)
+        Returns:
+        - list: A list of dictionaries with property labels with lists of their parsed values.
+        """
+        qualifier_list = []
+        for pid, qualifier in qualifiers.items():
+            q_value_data = []
+            for q in qualifier:
+                value = WikidataTextifier._mainsnak_to_value(q, labels, lang)
+                if value is not None:
+                    q_value_data.append(value)
 
-        if len(q_value_data) > 0:
-            qualifier_list.append({
-                'PID': pid,
-                'property-label': labels[pid],
-                'values': q_value_data
-            })
+            if len(q_value_data) > 0:
+                qualifier_list.append({
+                    'PID': pid,
+                    'property-label': labels[pid],
+                    'values': q_value_data
+                })
 
-    return qualifier_list
+        return qualifier_list
 
-def _claims_to_json(claims, labels={}, lang='en'):
-    """
-    Converts a dictionary of properties (claims) into a JSON list suitable for text generation.
+    def _claims_to_json(claims, labels={}, lang='en'):
+        """
+        Converts a dictionary of properties (claims) into a JSON list suitable for text generation.
 
-    Parameters:
-    - properties (dict): A dictionary of claims keyed by property IDs.
-        Each value is a list of claim statements for that property.
+        Parameters:
+        - properties (dict): A dictionary of claims keyed by property IDs.
+            Each value is a list of claim statements for that property.
 
-    Returns:
-    - list: A list of dictionaries with property labels, and lists of
-        their parsed values (and qualifiers).
-    """
-    properties_list = []
-    for pid, claim in claims.items():
-        p_value_data = []
-        rank_preferred_found = False
-        for c in claim:
-            value = _mainsnak_to_value(c.get('mainsnak', c), labels, lang)
-            qualifiers = _qualifiers_to_json(
-                c.get('qualifiers', {}), labels, lang
-            )
-            rank = c.get('rank', 'normal').lower()
+        Returns:
+        - list: A list of dictionaries with property labels, and lists of
+            their parsed values (and qualifiers).
+        """
+        properties_list = []
+        for pid, claim in claims.items():
+            p_value_data = []
+            rank_preferred_found = False
+            for c in claim:
+                value = WikidataTextifier._mainsnak_to_value(c.get('mainsnak', c), labels, lang)
+                qualifiers = WikidataTextifier._qualifiers_to_json(
+                    c.get('qualifiers', {}), labels, lang
+                )
+                rank = c.get('rank', 'normal').lower()
 
-            if value is not None:
-                # If a preferred rank exists, include values that are
-                # only preferred. Else include only values that are
-                # ranked normal (values with a depricated rank are
-                # never included)
-                is_rank_normal = (rank == 'normal')
-                is_rank_preferred = (rank == 'preferred')
-                rank_normal_condition = is_rank_normal and \
-                    (not rank_preferred_found)
-                if rank_normal_condition or is_rank_preferred:
+                if value is not None:
+                    # If a preferred rank exists, include values that are
+                    # only preferred. Else include only values that are
+                    # ranked normal (values with a depricated rank are
+                    # never included)
+                    is_rank_normal = (rank == 'normal')
+                    is_rank_preferred = (rank == 'preferred')
+                    rank_normal_condition = is_rank_normal and \
+                        (not rank_preferred_found)
+                    if rank_normal_condition or is_rank_preferred:
 
-                    # Found the first preferred rank
-                    if (not rank_preferred_found) and \
-                        is_rank_preferred:
-                        rank_preferred_found = True
-                        p_value_data = []
+                        # Found the first preferred rank
+                        if (not rank_preferred_found) and \
+                            is_rank_preferred:
+                            rank_preferred_found = True
+                            p_value_data = []
 
-                    p_value_data.append({
-                        'value': value,
-                        'qualifiers': qualifiers
-                    })
+                        p_value_data.append({
+                            'value': value,
+                            'qualifiers': qualifiers
+                        })
 
-        if len(p_value_data) > 0:
-            properties_list.append({
-                'PID': pid,
-                'property-label': labels[pid],
-                'values': p_value_data
-            })
+            if len(p_value_data) > 0:
+                properties_list.append({
+                    'PID': pid,
+                    'property-label': labels[pid],
+                    'values': p_value_data
+                })
 
-    return properties_list
+        return properties_list

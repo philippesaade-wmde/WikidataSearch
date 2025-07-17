@@ -20,6 +20,9 @@ RUN npm install -g yarn
 # Setup the app in workspace
 WORKDIR /workspace
 
+# Install FastText language detection model
+RUN curl -O https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
+
 # Install backend dependencies
 COPY --chmod=755 requirements.txt requirements.txt
 RUN pip install -r requirements.txt

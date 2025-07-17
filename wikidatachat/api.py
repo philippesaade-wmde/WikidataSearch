@@ -10,10 +10,7 @@ from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .logger import Logger
-from .jina import JinaAIAPI
-from .datastax import AstraDBConnect
-from .translator import Translator
-from .wikidata import get_text_by_id
+from .search import HybridSearch
 
 # Retrieve the frontend static directory path from environment variables, falling back to a default if not set.
 FRONTEND_STATIC_DIR = os.environ.get("FRONTEND_STATIC_DIR", "./frontend/dist")
@@ -47,10 +44,9 @@ app.mount(
     name="frontend-assets",
 )
 
-translator = Translator('en', ['en', 'de'])
-jina_api_key = os.environ.get("JINA_API_KEY")
-embedding_model = JinaAIAPI(api_key=jina_api_key)
-astradb = AstraDBConnect(os.environ, embedding_model)
+search = HybridSearch(os.environ,
+                      dest_lang='en',
+                      vectordb_langs=['en', 'de'])
 
 
 @app.get("/", include_in_schema=False)
@@ -108,6 +104,7 @@ async def item_query_route(
         str, Header(..., required=True, description="API key for authentication")
     ],
     query: str = Query(..., example="testing"),
+    instanceof: str = Query(None, example="Q5,Q634"),
     src_lang: str = 'en',
     K: int = 10,
     rerank: bool = True,
@@ -118,6 +115,10 @@ async def item_query_route(
     Args:
         x_api_secret (str): API Secret to confirm user is authorised.
         query (str): The query string to be processed.
+        instanceof (str): Optional QIDs to filter results by instance of a specific class.
+        src_lang (str): The source language of the query.
+        K (int): The number of top results to return.
+        rerank (bool): Whether to rerank the results based on relevance.
 
     Returns:
         list: A list of dictionaries containing QIDs and the similarity scores.
@@ -134,32 +135,21 @@ async def item_query_route(
         Logger.add_request(request, response, 422, start_time)
         raise HTTPException(status_code=422, detail=response)
 
+    filter={"metadata.IsItem": True}
+
+    if instanceof:
+        instanceof = instanceof.split(",")
+        instanceof = [qid.strip() for qid in instanceof]
+        filter["metadata.InstanceOf"] = {"$in": instanceof}
 
     try:
-        query = translator.translate(query, src_lang=src_lang)
-
-        vector_results = astradb.vector_similar_qids(
+        results = search.search(
             query,
+            filter=filter,
             K=K,
-            filter={"metadata.IsItem": True}
+            src_lang=src_lang,
+            rerank=rerank
         )
-
-        keyword_results = astradb.keyword_similar_qids(
-            query,
-            K=K,
-            filter={"metadata.IsItem": True}
-        )
-
-        results = astradb.reciprocal_rank_fusion({
-            'Vector Search': vector_results,
-            'Keyword Search': keyword_results
-        })
-
-        for i in range(len(results)):
-            results[i]['text'] = get_text_by_id(results[i]['QID'])
-
-        if rerank:
-            results = embedding_model.rerank(query, results)
 
         Logger.add_request(request, results, 200, start_time)
         return results
@@ -207,6 +197,7 @@ async def property_query_route(
         str, Header(..., required=True, description="API key for authentication")
     ],
     query: str = Query(..., example="testing"),
+    instanceof: str = Query(None, example="Q18616576"),
     src_lang: str = 'en',
     K: int = 10,
     rerank: bool = True,
@@ -217,6 +208,10 @@ async def property_query_route(
     Args:
         x_api_secret (str): API Secret to confirm user is authorised.
         query (str): The query string to be processed.
+        instanceof (str): Optional QIDs to filter results by instance of a specific class.
+        src_lang (str): The source language of the query.
+        K (int): The number of top results to return.
+        rerank (bool): Whether to rerank the results based on relevance.
 
     Returns:
         list: A list of dictionaries containing QIDs and the similarity scores.
@@ -233,31 +228,21 @@ async def property_query_route(
         Logger.add_request(request, response, 422, start_time)
         raise HTTPException(status_code=422, detail=response)
 
+    filter={"metadata.IsItem": True}
+
+    if instanceof:
+        instanceof = instanceof.split(",")
+        instanceof = [qid.strip() for qid in instanceof]
+        filter["metadata.InstanceOf"] = {"$in": instanceof}
+
     try:
-        query = translator.translate(query, src_lang=src_lang)
-
-        vector_results = astradb.vector_similar_qids(
+        results = search.search(
             query,
+            filter={"metadata.IsProperty": True},
             K=K,
-            filter={"metadata.IsProperty": True}
+            src_lang=src_lang,
+            rerank=rerank
         )
-
-        keyword_results = astradb.keyword_similar_qids(
-            query,
-            K=K,
-            filter={"metadata.IsItem": True}
-        )
-
-        results = astradb.reciprocal_rank_fusion({
-            'Vector Search': vector_results,
-            'Keyword Search': keyword_results
-        })
-
-        for i in range(len(results)):
-            results[i]['text'] = get_text_by_id(results[i]['QID'])
-
-        if rerank:
-            results = embedding_model.rerank(query, results)
 
         Logger.add_request(request, results, 200, start_time)
         return results
@@ -306,7 +291,6 @@ async def similarity_score_route(
     ],
     query: str = Query(..., example="testing"),
     qid: str = Query(..., example="Q42,Q2,Q36153"),
-    src_lang: str = 'en',
 ):
     """
     Get the similarity score for a given query and a specified list of Wikidata entities.
@@ -337,21 +321,12 @@ async def similarity_score_route(
         raise HTTPException(status_code=422, detail=response)
 
     try:
-        query = translator(query, src_lang=src_lang)
-
         qids = qid.split(",")
         qids = [q.strip() for q in qids]
 
-        filter = {'$or':
-            [
-                {'metadata.QID': qid} if qid[0]=='Q' else {'metadata.PID': qid}
-                for qid in qids
-            ]
-        }
-
-        results = astradb.get_similar_qids(
+        results = search.vectorsearch.get_similarity_scores(
             query,
-            filter=filter
+            qids
         )
 
         Logger.add_request(request, results, 200, start_time)

@@ -4,4 +4,5 @@ uvicorn
 astrapy
 langchain-astradb
 sqlalchemy
-langdetect
+fasttext-wheel
+stopwordsiso
