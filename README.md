@@ -1,7 +1,7 @@
 # WikidataSearch
 
 ## Introduction
-WikidataSearch, a component of WikidataChat, is a web application and API designed to facilitate the connection between users and the Wikidata Vector Database.
+WikidataSearch is a web application and API designed to facilitate the connection between users and the Wikidata Vector Database.
 
 ## Getting Started
 
@@ -11,14 +11,14 @@ WikidataSearch, a component of WikidataChat, is a web application and API design
 ### Docker Installation (Recommended)
 1. Follow these instructions to [install Docker](https://docs.docker.com/engine/install/) on your system.
 
-2. Deploy WikidataChat using Docker with the following commands:
+2. Deploy WikidataSearch using Docker with the following commands:
 
 ```bash
 docker build . -t "prototype"
 
 docker run \
     -v $(pwd)/.env:/workspace/.env \
-    -v "$(pwd)/wikidatachat":/workspace/wikidatachat \
+    -v "$(pwd)/Wikidatasearch":/workspace/Wikidatasearch \
     -v "$(pwd)/frontend":/workspace/frontend \
     -p 8000:8000 \
     -p 5173:5173 \
@@ -27,7 +27,7 @@ docker run \
     prototype
 ```
 
-This will deploy the UI to `localhost:8000`, allowing local access to the WikidataChat interface.
+This will deploy the UI to `localhost:8000`, allowing local access to the WikidataSearch interface.
 
 ### Deploying to Toolforge
 1. Shell into the Toolforge system:
@@ -45,7 +45,7 @@ become wd-vectordb
 3. Build from Git:
 
 ```bash
-toolforge build start https://github.com/philippesaade-wmde/WikidataChat.git --ref prototype
+toolforge build start https://github.com/philippesaade-wmde/WikidataSearch.git --ref prototype
 ```
 
 4. Start the web service:
@@ -75,7 +75,7 @@ We welcome contributions from the community. Whether it's features, bug fixes, o
 Please adhere to the Wikimedia Community Universal Code of Conduct when contributing.
 
 ## License
-WikidataChat is open-source software licensed under the MIT License. You are free to use, modify, and distribute the software as you wish. We kindly ask for a citation to this repository if you use WikidataChat in your projects.
+WikidataSearch is open-source software licensed under the MIT License. You are free to use, modify, and distribute the software as you wish. We kindly ask for a citation to this repository if you use WikidataSearch in your projects.
 
 ## Contact
 For questions, comments, or discussions, please open an issue on this GitHub repository. We are committed to fostering a welcoming and collaborative community.
