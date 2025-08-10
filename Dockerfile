@@ -33,7 +33,7 @@ COPY --chmod=755 frontend/yarn.lock frontend/yarn.lock
 RUN cd frontend && yarn install
 
 # Copy backend for production
-COPY --chmod=755 wikidatachat wikidatachat
+COPY --chmod=755 Wikidatasearch Wikidatasearch
 
 # Copy and build frontend for production (into the frontend/dist folder)
 COPY --chmod=755 frontend frontend
