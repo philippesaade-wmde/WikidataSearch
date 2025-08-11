@@ -62,25 +62,52 @@ const props = defineProps<{
 
 const response = ref<ResponseObject[]>([])
 
+function chunk<T>(arr: T[], size: number): T[][] {
+  const result: T[][] = []
+  for (let i = 0; i < arr.length; i += size) {
+    result.push(arr.slice(i, i + size))
+  }
+  return result
+}
+
 const fetchWikidataInfo = async () => {
   if (!props.response || props.response.length === 0) return
 
-  const qids = props.response.map((r) => r.QID).join('|')
-
-  const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&ids=${qids}&props=labels|descriptions|claims&languages=en&origin=*`
+  const qids = props.response.map(r => r.QID)
+  const batches = chunk(qids, 50)
 
   try {
-    const res = await fetch(url)
-    const data = await res.json()
+    const allEntities: Record<string, any> = {}
 
-    response.value = props.response.map((r) => {
-      const entity = data.entities[r.QID]
+    await Promise.all(
+      batches.map(async ids => {
+        const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&ids=${ids.join(
+          '|'
+        )}&props=labels|descriptions|claims&languages=en&origin=*`
+
+        const res = await fetch(url, {
+          headers: {
+            'User-Agent': 'Wikidata Search (philippe.saade@wikimedia.de)'
+          }
+        })
+        const data = await res.json()
+        Object.assign(allEntities, data.entities || {})
+      })
+    )
+
+    response.value = props.response.map(r => {
+      const entity = allEntities[r.QID]
+      const imageName =
+        entity?.claims?.P18?.[0]?.mainsnak?.datavalue?.value || null
+
       return {
         ...r,
         label: entity?.labels?.en?.value || 'Unknown',
         description: entity?.descriptions?.en?.value || 'No description available',
-        imageUrl: entity?.claims?.P18?.[0]?.mainsnak?.datavalue?.value
-          ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(entity.claims.P18[0].mainsnak.datavalue.value)}`
+        imageUrl: imageName
+          ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(
+              imageName
+            )}`
           : null
       }
     })
@@ -88,6 +115,7 @@ const fetchWikidataInfo = async () => {
     console.error('Error fetching Wikidata info:', error)
   }
 }
+
 
 // Fetch when response changes
 watch(() => props.response, fetchWikidataInfo, { immediate: true })

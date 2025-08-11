@@ -315,8 +315,8 @@ class HybridSearch(Search):
                 try:
                     rid = r.get('QID', r.get('PID'))
                     r['text'] = self.get_text_by_id(rid)
-                except Exception:
-                    # Keep existing text on failure
+                except Exception as e:
+                    print(e)
                     pass
                 return i, r
 

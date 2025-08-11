@@ -106,7 +106,7 @@ async def item_query_route(
     query: str = Query(..., example="testing"),
     instanceof: str = Query(None, example="Q5,Q634"),
     src_lang: str = 'en',
-    K: int = 10,
+    K: int = 100,
     rerank: bool = True,
 ):
     """
