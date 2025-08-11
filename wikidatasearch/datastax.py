@@ -40,7 +40,7 @@ class AstraDBConnect:
         doc = Document(page_content=text, metadata=metadata)
         self.graph_store.add_documents([doc], ids=[id])
 
-    def get_similar_qids(self, query, filter={}, K=50):
+    def get_similar_qids(self, query, filter={}, K=100):
         """
         Retrieve similar QIDs for a given query string.
 
@@ -59,7 +59,7 @@ class AstraDBConnect:
         relevant_items = self.wikiDataCollection.find(
             filter,
             sort={"$vector": embedding},
-            limit=50,
+            limit=K,
             include_similarity=True
         )
 
