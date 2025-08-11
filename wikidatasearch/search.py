@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from astrapy import DataAPIClient
 from astrapy.api_options import APIOptions, TimeoutOptions
@@ -8,7 +9,6 @@ import re
 
 from .jina import JinaAIAPI
 from .translator import Translator
-from .wikidata import WikidataTextifier
 
 class Search(ABC):
     """
@@ -83,8 +83,9 @@ class VectorSearch(Search):
         relevant_items = self.wikiDataCollection.find(
             filter,
             sort={"$vector": embedding},
-            limit=50,
-            include_similarity=True
+            limit=K,
+            include_similarity=True,
+            projection={"content": 1, "metadata": 1}
         )
 
         seen_qids = set()
@@ -110,8 +111,7 @@ class VectorSearch(Search):
 
     def get_similarity_scores(self,
                               query: str,
-                              qids: list,
-                              K: int = 100) -> list:
+                              qids: list) -> list:
         """
         Retrieve similarity scores for a list of QIDs based on a query.
 
@@ -122,18 +122,15 @@ class VectorSearch(Search):
         Returns:
             list: A list of dictionaries containing the similarity score.
         """
-        filter = {'$or':
-            [
-                {'metadata.QID': qid} if qid.startswith('Q') \
-                    else {'metadata.PID': qid} \
-                        for qid in qids
-            ]
-        }
+        filter = {"$or": [
+            {"metadata.QID": {"$in": [q for q in qids if q.startswith("Q")]}},
+            {"metadata.PID": {"$in": [p for p in qids if p.startswith("P")]}}
+        ]}
 
         results = self.search(
             query,
             filter=filter,
-            K=K
+            K=100
         )
         while len(results) < len(qids):
             qids_found = [result.get('QID', result.get('PID')) for result in results]
@@ -141,18 +138,15 @@ class VectorSearch(Search):
             if len(remaining_qids) == 0:
                 break
 
-            filter = {'$or':
-                [
-                    {'metadata.QID': qid} if qid.startswith("Q") \
-                        else {'metadata.PID': qid} \
-                            for qid in remaining_qids
-                ]
-            }
+            filter = {"$or": [
+                {"metadata.QID": {"$in": [q for q in remaining_qids if q.startswith("Q")]}},
+                {"metadata.PID": {"$in": [p for p in remaining_qids if p.startswith("P")]}}
+            ]}
 
             remaining_results = self.search(
                 query,
                 filter=filter,
-                K=K
+                K=100
             )
             if len(remaining_results) == 0:
                 break
@@ -256,7 +250,8 @@ class HybridSearch(Search):
     def search(self,
                query: str,
                filter: dict = {},
-               K: int = 100,
+               vs_K: int = 100,
+               ks_K: int = 5,
                src_lang: str = 'en',
                rerank: bool = True) -> list:
         """
@@ -265,35 +260,48 @@ class HybridSearch(Search):
         Args:
             query (str): The search query string.
             filter (dict, optional): Additional filtering criteria.
-            K (int, optional): Number of top results to return. Defaults to 100.
+            vs_K (int, optional): Number of top results from Vector Search. Defaults to 100.
+            ks_K (int, optional): Number of top results from Keyword Search. Defaults to 5.
             src_lang (str): The source language of the query. Defaults to 'en'.
 
         Returns:
             list: A list of dictionaries containing search results.
         """
-        # Translate the query if necessary
-        translated_query = self.translator.translate(query, src_lang=src_lang)
 
-        # Perform vector search
-        vector_results = self.vectorsearch.search(
-            translated_query,
-            filter=filter,
-            K=K
-        )
+        def _vector_search_thread():
+            # Translate the query if necessary
+            translated_query = self.translator.translate(query, src_lang=src_lang)
 
-        # Perform keyword search
-        keyword_results = self.keywordsearch.search(
-            query,
-            filter=filter,
-            K=K
-        )
+            # Perform vector search
+            vector_results = self.vectorsearch.search(
+                translated_query,
+                filter=filter,
+                K=vs_K
+            )
 
-        # Get similarity scores for keyword results
-        keyword_results = self.vectorsearch.get_similarity_scores(
-            query,
-            keyword_results,
-            K=K
-        )
+            return vector_results
+
+        def _keyword_search_thread():
+            # Perform keyword search
+            keyword_results = self.keywordsearch.search(
+                query,
+                filter=filter,
+                K=ks_K
+            )
+
+            # Get similarity scores for keyword results
+            keyword_results = self.vectorsearch.get_similarity_scores(
+                query,
+                keyword_results
+            )
+
+            return keyword_results
+
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            f1 = ex.submit(_vector_search_thread)
+            f2 = ex.submit(_keyword_search_thread)
+            vector_results = f1.result()
+            keyword_results = f2.result()
 
         # Combine results using Reciprocal Rank Fusion
         results = self.reciprocal_rank_fusion({
@@ -303,10 +311,22 @@ class HybridSearch(Search):
 
         if rerank:
             # Rerank the results with the current Wikidata values.
-            for i in range(len(results)):
-                results[i]['text'] = WikidataTextifier.get_text_by_id(
-                    results[i].get('QID', results[i].get('PID'))
-                )
+            def _fetch_text(i, r):
+                try:
+                    rid = r.get('QID', r.get('PID'))
+                    r['text'] = self.get_text_by_id(rid)
+                except Exception:
+                    # Keep existing text on failure
+                    pass
+                return i, r
+
+            with ThreadPoolExecutor(max_workers=min(4, len(results))) as ex:
+                futs = [ex.submit(_fetch_text, i, results[i]) \
+                         for i in range(len(results))]
+                for fut in as_completed(futs):
+                    i, updated = fut.result()
+                    results[i] = updated
+
             results = self.embedding_model.rerank(query, results)
 
         return results
@@ -362,3 +382,26 @@ class HybridSearch(Search):
             reverse=True
         )
         return fused_results
+
+    def get_text_by_id(self, qid):
+        """
+        Fetches the textual representations of a Wikidata entity by its QID.
+
+        Args:
+            id: A Wikidata entity ID.
+
+        Returns:
+            text: A textual representation of the Wikidata entity.
+        """
+        params = {
+            'id': qid,
+            'lang': 'en',
+            'external_ids': False,
+            'format': 'text'
+        }
+        url = "https://wd-textify.toolforge.org"
+        results = requests.get(url, params=params)
+        results.raise_for_status()
+
+        text = results.json()
+        return text

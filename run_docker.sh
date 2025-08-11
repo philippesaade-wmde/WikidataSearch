@@ -1,7 +1,7 @@
 docker build . -t "prototype"
 docker run \
     -v $(pwd)/.env:/workspace/.env \
-    -v "$(pwd)/Wikidatasearch":/workspace/Wikidatasearch \
+    -v "$(pwd)/wikidatasearch":/workspace/wikidatasearch \
     -v "$(pwd)/data":/workspace/data \
     -v "$(pwd)/frontend":/workspace/frontend \
     -p 8000:8000 \

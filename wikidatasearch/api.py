@@ -146,7 +146,6 @@ async def item_query_route(
         results = search.search(
             query,
             filter=filter,
-            K=K,
             src_lang=src_lang,
             rerank=rerank
         )
@@ -228,7 +227,7 @@ async def property_query_route(
         Logger.add_request(request, response, 422, start_time)
         raise HTTPException(status_code=422, detail=response)
 
-    filter={"metadata.IsItem": True}
+    filter={"metadata.IsProperty": True}
 
     if instanceof:
         instanceof = instanceof.split(",")
@@ -238,8 +237,7 @@ async def property_query_route(
     try:
         results = search.search(
             query,
-            filter={"metadata.IsProperty": True},
-            K=K,
+            filter=filter,
             src_lang=src_lang,
             rerank=rerank
         )
