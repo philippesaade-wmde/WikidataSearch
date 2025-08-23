@@ -105,7 +105,7 @@ async def item_query_route(
         str, Header(..., required=True, description="API key for authentication")
     ],
     query: str = Query(..., example="testing"),
-    K: int = 100,
+    K: int = 50,
 ):
     """
     Query on Wikidata items in the Vector Database.
