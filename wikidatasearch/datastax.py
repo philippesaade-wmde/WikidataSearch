@@ -40,7 +40,7 @@ class AstraDBConnect:
         doc = Document(page_content=text, metadata=metadata)
         self.graph_store.add_documents([doc], ids=[id])
 
-    def get_similar_qids(self, query, filter={}, K=100):
+    def get_similar_qids(self, query, filter={}, K=50):
         """
         Retrieve similar QIDs for a given query string.
 
