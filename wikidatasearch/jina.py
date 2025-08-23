@@ -4,7 +4,7 @@ import numpy as np
 import base64
 
 class JinaAIAPIEmbedder:
-    def __init__(self, api_key, passage_task="retrieval.passage", query_task="retrieval.query", embedding_dim=512):
+    def __init__(self, api_key, passage_task="retrieval.passage", query_task="retrieval.query", embedding_dim=1024):
         """
         Initializes the JinaAIEmbedder class.
 
