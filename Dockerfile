@@ -1,12 +1,12 @@
-# Use the official Python image from the Docker Hub
-FROM ubuntu:22.04
+FROM python:3.13-slim-bookworm
+COPY --from=ghcr.io/astral-sh/uv:0.7 /uv /uvx /bin/
 
-# Install essential packages from ubuntu repository
-RUN apt-get update -y && \
-    apt-get install -y curl && \
-    apt-get install -y python3 python3-pip python3-venv && \
-    apt-get clean && \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential g++ make cmake python3-dev pkg-config libgomp1 curl ca-certificates gnupg && \
     rm -rf /var/lib/apt/lists/*
+
+# Setup the app in workspace
+WORKDIR /workspace
 
 # Install node from upstream
 RUN curl -sL https://deb.nodesource.com/setup_18.x | bash
@@ -17,28 +17,20 @@ RUN apt-get install -y nodejs && \
 # Install node package manager yarn
 RUN npm install -g yarn
 
-# Setup the app in workspace
-WORKDIR /workspace
+# Install frontend dependencies and build frontend
+COPY frontend/package.json frontend/yarn.lock ./frontend/
+RUN cd frontend && yarn install
+COPY frontend ./frontend
+RUN cd frontend && yarn build
+
+# Install backend dependencies
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked
+
+COPY wikidatasearch ./wikidatasearch
 
 # Install FastText language detection model
 RUN curl -O https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
 
-# Install backend dependencies
-COPY --chmod=755 requirements.txt requirements.txt
-RUN pip install -r requirements.txt
-
-# Install frontend dependencies
-COPY --chmod=755 frontend/package.json frontend/package.json
-COPY --chmod=755 frontend/yarn.lock frontend/yarn.lock
-RUN cd frontend && yarn install
-
-# Copy backend for production
-COPY --chmod=755 wikidatasearch wikidatasearch
-
-# Copy and build frontend for production (into the frontend/dist folder)
-COPY --chmod=755 frontend frontend
-RUN cd frontend && yarn build
-
-# Container startup script
-COPY --chmod=755 start.sh /start.sh
-CMD [ "/start.sh" ]
+# Container start script
+CMD [ "uv", "run", "uvicorn", "wikidatasearch:app", "--reload", "--host", "0.0.0.0", "--port", "8000" ]

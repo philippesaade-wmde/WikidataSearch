@@ -5,4 +5,5 @@ export interface ResponseObject {
   label: string
   description: string
   imageUrl: string | null
+  query: string | null
 }

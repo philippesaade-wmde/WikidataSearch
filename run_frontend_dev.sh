@@ -1,1 +1,0 @@
-docker exec -it -w /workspace/frontend-dev prototype yarn run dev --host
