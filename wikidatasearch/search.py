@@ -365,7 +365,7 @@ class KeywordSearch(Search):
         - str: The cleaned query string suitable for searching.
         """
         if (not bool(lang)) or (lang == 'all'):
-            lang = self.lang_detector.detect(query)
+            lang = 'en'
 
         # Remove stopwords
         query = re.sub(r'[^\w\s]', '', query)

@@ -94,8 +94,7 @@ async def favicon():
 @app.get("/languages", include_in_schema=False)
 async def languages():
     vectordb_langs = set(search.vectorsearch.vectordb_langs)
-    other_langs = set(search.vectorsearch.translator.mint_langs) & \
-                    set(search.vectorsearch.translator.fasttext_langs)
+    other_langs = set(search.vectorsearch.translator.mint_langs)
     other_langs = other_langs - vectordb_langs
     return {
         'vectordb_langs': sorted(list(vectordb_langs)),
