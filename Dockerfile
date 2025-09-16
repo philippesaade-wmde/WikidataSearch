@@ -29,8 +29,5 @@ RUN uv sync --locked
 
 COPY wikidatasearch ./wikidatasearch
 
-# Install FastText language detection model
-RUN curl -O https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
-
 # Container start script
 CMD [ "uv", "run", "uvicorn", "wikidatasearch:app", "--reload", "--host", "0.0.0.0", "--port", "8000" ]
