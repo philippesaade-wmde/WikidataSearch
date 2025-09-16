@@ -1,5 +1,6 @@
 import requests
 import re
+import os
 import fasttext
 
 class Translator:
@@ -11,6 +12,15 @@ class Translator:
         - dest_lang (str): The destination languge to translate to that best fits the vector database.
         - vectordb_langs (list): List of languages found in the vector database.
         """
+        if not os.path.exists("lid.176.bin"):
+            print("Installing lid.176.bin ...")
+            response = requests.get("https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin", stream=True)
+            response.raise_for_status()
+            with open("lid.176.bin", "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+
         self.dest_lang = dest_lang
         self.lang_detector = fasttext.load_model('lid.176.bin')
 

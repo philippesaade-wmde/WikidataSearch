@@ -90,9 +90,12 @@ const fetchWikidataInfo = async () => {
 
     await Promise.all(
       batches.map(async ids => {
+        let lang = [props.response?.[0]?.lang?.toLowerCase(), 'mul', 'en']
+
         const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&ids=${ids.join(
           '|'
-        )}&props=labels|descriptions|claims&languages=en&origin=*`
+        )}&props=labels|descriptions|claims&languages=${lang.join(',')}&origin=*`
+
         const res = await fetch(url, {
           headers: { 'User-Agent': 'Wikidata Search (philippe.saade@wikimedia.de)' }
         })
@@ -104,11 +107,19 @@ const fetchWikidataInfo = async () => {
     response.value = props.response.map(r => {
       const entity = allEntities[r.QID]
       const imageName = entity?.claims?.P18?.[0]?.mainsnak?.datavalue?.value || null
+      const lang = r.lang?.toLowerCase() || 'en'
 
       return {
         ...r,
-        label: entity?.labels?.en?.value || 'Unknown',
-        description: entity?.descriptions?.en?.value || 'No description available',
+        label:
+          entity?.labels?.[lang]?.value ||
+          entity?.labels?.mul?.value ||
+          entity?.labels?.en?.value || 'Unknown',
+        description:
+          entity?.descriptions?.[lang]?.value ||
+          entity?.descriptions?.mul?.value ||
+          entity?.descriptions?.en?.value ||
+          'No description available',
         imageUrl: imageName
           ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(imageName)}`
           : null,

@@ -71,7 +71,7 @@
                 class="flex items-center gap-1 cursor-pointer px-2 py-1 border rounded-lg hover:bg-light-menu dark:hover:bg-dark-menu transition-colors"
               >
                 <input type="radio" :value="lang" v-model="selectedLanguage" class="accent-blue-600" />
-                {{ capitalizeFirstLetter(lang) }}
+                {{ lang.toUpperCase() }}
               </label>
             </div>
 
@@ -82,7 +82,7 @@
                 class="rounded-lg border border-light-distinct-text dark:border-dark-distinct-text bg-light-menu dark:bg-dark-menu text-light-text dark:text-dark-text h-8 px-2"
               >
                 <option v-for="lang in otherLanguages" :key="lang" :value="lang">
-                  {{ capitalizeFirstLetter(lang) }}
+                  {{ lang.toUpperCase() }}
                 </option>
               </select>
 
@@ -95,7 +95,7 @@
                 <div
                   class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-80 p-3 bg-light-menu dark:bg-dark-menu text-sm text-light-text dark:text-dark-text rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"
                 >
-                  <p class="font-semibold mb-2">Language Selection Info</p>
+                  <p class="font-semibold mb-3">Language Selection Info</p>
                   <p class="mb-2">
                     <strong>Radio buttons</strong> represent languages with dedicated vector datasets. Selecting one queries vectors in that language.
                   </p>
@@ -103,7 +103,7 @@
                     <strong>Dropdown menu</strong> shows other languages without dedicated vectors. Selecting one will translate your query to English and search the full vector database.
                   </p>
                   <p>
-                    The <strong>'All'</strong> option queries the full vector database regardless of language. More languages will be added as dedicated vectors in future releases.
+                    The <strong>'ALL'</strong> option queries the full vector database regardless of language. More languages will be added as dedicated vectors in future releases.
                   </p>
                 </div>
               </div>
@@ -176,7 +176,7 @@ onMounted(async () => {
     vectordbLangs.value = ['all', ...data.vectordb_langs]
     otherLanguages.value = data.other_langs
     if (!vectordbLangs.value.includes(selectedLanguage.value.toLowerCase())) {
-      selectedLanguage.value = 'All'
+      selectedLanguage.value = 'ALL'
     }
   } catch (e) {
     console.error('Failed to fetch languages', e)
@@ -189,10 +189,11 @@ async function search() {
   displayResponse.value = true
 
   const secret = apiSecret()
+  let lang = selectedLanguage.value.toLowerCase() || 'all'
 
   try {
     const fetchResult = await fetch(
-      `/item/query/?query=${encodeURIComponent(inputText.value)}&rerank=True&lang=${selectedLanguage.value.toLowerCase()}`,
+      `/item/query/?query=${encodeURIComponent(inputText.value)}&rerank=True&lang=${lang}`,
       {
         headers: secret ? { 'x-api-secret': secret } : {}
       }
@@ -206,21 +207,20 @@ async function search() {
 
     const jsonResponse = await fetchResult.json()
 
+    if (!lang || lang === 'all') {
+      lang = 'en'
+    }
+
     // Add the user query to each result for feedback tracking
     response.value = jsonResponse.map((r: any) => ({
       ...r,
-      query: inputText.value
+      query: inputText.value,
+      lang: lang
     }))
   } catch (e) {
     displayResponse.value = false
     console.error(e)
     error.value = 'Sorry. Failed to retrieve response.'
   }
-}
-
-
-function capitalizeFirstLetter(str: string) {
-  if (!str) return ''
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
 }
 </script>

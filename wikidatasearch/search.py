@@ -59,6 +59,7 @@ class Search(ABC):
         results.raise_for_status()
 
         text = results.json()
+        assert isinstance(text, str)
         return text
 
 
@@ -122,10 +123,15 @@ class VectorSearch(Search):
         if re.fullmatch(r'[PQ]\d+', query):
             item, embedding = self.get_embedding_by_id(
                 query,
-                return_text=return_text
+                return_text=return_text,
+                lang=lang
             )
+
             if not item:
-                query = self.get_text_by_id(query, format='text', lang=lang)
+                try:
+                    query = self.get_text_by_id(query, format='text', lang=lang)
+                except:
+                    return []
             else:
                 ID_name = 'QID' if query.startswith('Q') else 'PID'
                 item_output = {
@@ -493,6 +499,7 @@ class HybridSearch(Search):
                     i, updated = fut.result()
                     results[i] = updated
 
+            results = [r for r in results if r['text']]
             results = self.embedding_model.rerank(query, results)
 
             # Remove text from results to reduce payload size
