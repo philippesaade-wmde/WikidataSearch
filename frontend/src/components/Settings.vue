@@ -136,7 +136,7 @@
           Share your thoughts and projects if you’re using the Wikidata vector database!
         </p>
 
-        <a href="https://wikimedia.sslsurvey.de/Wikidata-Vector-DB-Feedback-Survey-1st-Prototype-" target="_blank" class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
+        <a href="https://wikimedia.sslsurvey.de/Wikidata-Vector-DB-Feedback-Alpha-release" target="_blank" class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
           Take the Survey
         </a>
 

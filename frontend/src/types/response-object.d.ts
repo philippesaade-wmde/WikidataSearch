@@ -1,5 +1,5 @@
 export interface ResponseObject {
-  QID: string
+  id: string
   similarity_score: number
   source: string
   label: string

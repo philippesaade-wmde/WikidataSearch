@@ -7,14 +7,18 @@
     <template v-else-if="response?.length">
       <div
         v-for="(r, index) in response"
-        :key="r.QID"
+        :key="r.id"
         class="p-4 m-2 rounded-lg bg-light-bg dark:bg-dark-bg border border-light-border dark:border-dark-border
                hover:shadow-lg hover:bg-light-hover dark:hover:bg-dark-hover transition cursor-pointer"
       >
-        <a :href="'https://www.wikidata.org/wiki/' + r.QID" target="_blank" class="flex items-start gap-6">
+        <a
+          :href="'https://www.wikidata.org/wiki/' + (r.id.startsWith('P') ? 'Property:' + r.id : r.id)"
+          target="_blank"
+          class="flex items-start gap-6"
+        >
           <!-- Text Info -->
           <div class="flex-1 space-y-2">
-            <div class="text-xl font-semibold">{{ r.label }} ({{ r.QID }})</div>
+            <div class="text-xl font-semibold">{{ r.label }} ({{ r.id }})</div>
             <div class="text-md text-light-muted dark:text-dark-muted">{{ r.description }}</div>
             <div class="text-md text-light-accent dark:text-dark-accent">Similarity Score: {{ r.similarity_score }}</div>
             <div class="text-md text-light-accent dark:text-dark-accent">Source: {{ r.source }}</div>
@@ -29,13 +33,13 @@
               </template>
               <template v-else>
                 <button
-                  @click.prevent="submitFeedback(r.QID, 'up', index)"
+                  @click.prevent="submitFeedback(r.id, 'up', index)"
                   class="flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 transition"
                 >
                   👍 <p class="text-sm">Helpful</p>
                 </button>
                 <button
-                  @click.prevent="submitFeedback(r.QID, 'down', index)"
+                  @click.prevent="submitFeedback(r.id, 'down', index)"
                   class="flex items-center gap-2 px-3 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded hover:bg-red-200 dark:hover:bg-red-800 transition"
                 >
                   👎 <p class="text-sm">Not Helpful</p>
@@ -82,7 +86,7 @@ function chunk<T>(arr: T[], size: number): T[][] {
 const fetchWikidataInfo = async () => {
   if (!props.response || props.response.length === 0) return
 
-  const qids = props.response.map(r => r.QID)
+  const qids = props.response.map(r => r.id)
   const batches = chunk(qids, 50)
 
   try {
@@ -105,7 +109,7 @@ const fetchWikidataInfo = async () => {
     )
 
     response.value = props.response.map(r => {
-      const entity = allEntities[r.QID]
+      const entity = allEntities[r.id]
       const imageName = entity?.claims?.P18?.[0]?.mainsnak?.datavalue?.value || null
       const lang = r.lang?.toLowerCase() || 'en'
 
@@ -138,12 +142,12 @@ const fetchWikidataInfo = async () => {
 watch(() => props.response, fetchWikidataInfo, { immediate: true })
 
 // Submit feedback for a result
-const submitFeedback = async (QID: string, sentiment: 'up' | 'down', index: number) => {
+const submitFeedback = async (id: string, sentiment: 'up' | 'down', index: number) => {
   if (!response.value) return
   const query = response.value[index].query ?? ''
 
   try {
-    const res = await fetch(`/feedback?query=${encodeURIComponent(query)}&qid=${QID}&sentiment=${sentiment}&index=${index}`, {
+    const res = await fetch(`/feedback?query=${encodeURIComponent(query)}&id=${id}&sentiment=${sentiment}&index=${index}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     })

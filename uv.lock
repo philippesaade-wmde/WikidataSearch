@@ -911,6 +911,15 @@ wheels = [
 ]
 
 [[package]]
+name = "setuptools"
+version = "80.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/5d/3bf57dcd21979b887f014ea83c24ae194cfcd12b9e0fda66b957c69d1fca/setuptools-80.9.0.tar.gz", hash = "sha256:f36b47402ecde768dbfafc46e8e4207b4360c654f1f3bb84475f0a28628fb19c", size = 1319958, upload-time = "2025-05-27T00:56:51.443Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl", hash = "sha256:062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922", size = 1201486, upload-time = "2025-05-27T00:56:49.664Z" },
+]
+
+[[package]]
 name = "six"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1084,6 +1093,7 @@ dependencies = [
     { name = "fastapi-cache2" },
     { name = "gunicorn" },
     { name = "langchain-astradb" },
+    { name = "setuptools" },
     { name = "slowapi" },
     { name = "sqlalchemy" },
     { name = "stopwordsiso" },
@@ -1097,6 +1107,7 @@ requires-dist = [
     { name = "fastapi-cache2", specifier = ">=0.2.2" },
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "langchain-astradb", specifier = "==0.6.0" },
+    { name = "setuptools", specifier = ">=80.9.0" },
     { name = "slowapi", specifier = ">=0.1.9" },
     { name = "sqlalchemy", specifier = ">=2.0.43" },
     { name = "stopwordsiso", specifier = ">=0.6.1" },

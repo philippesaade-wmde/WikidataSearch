@@ -105,11 +105,11 @@ async def languages():
 async def feedback(
     request: Request,
     query: str = Query(..., example="testing"),
-    qid: str = Query(..., example="Q5"),
+    id: str = Query(..., example="Q5"),
     sentiment: str = Query(..., example="up"),
     index: int = Query(..., example=0)):
 
-    Feedback.add_feedback(query, qid, sentiment, index)
+    Feedback.add_feedback(query, id, sentiment, index)
     return True
 
 @app.get(

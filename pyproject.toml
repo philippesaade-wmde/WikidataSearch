@@ -10,6 +10,7 @@ dependencies = [
     "fastapi-cache2>=0.2.2",
     "gunicorn>=23.0.0",
     "langchain-astradb==0.6.0",
+    "setuptools>=80.9.0",
     "slowapi>=0.1.9",
     "sqlalchemy>=2.0.43",
     "stopwordsiso>=0.6.1",

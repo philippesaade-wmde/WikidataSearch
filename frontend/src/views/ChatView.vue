@@ -60,52 +60,82 @@
             />
           </div>
 
-          <!-- Language Selector -->
-          <div class="flex flex-col md:flex-row items-start md:items-center gap-4 text-sm text-light-text dark:text-dark-text">
+          <!-- Controls -->
+          <div class="flex items-center justify-between gap-4 flex-wrap text-sm text-light-text dark:text-dark-text">
 
-            <!-- Radios for vectordb_langs -->
-            <div class="flex gap-4 items-center flex-wrap">
-              <label
-                v-for="lang in vectordbLangs"
-                :key="lang"
-                class="flex items-center gap-1 cursor-pointer px-2 py-1 border rounded-lg hover:bg-light-menu dark:hover:bg-dark-menu transition-colors"
-              >
-                <input type="radio" :value="lang" v-model="selectedLanguage" class="accent-blue-600" />
-                {{ lang.toUpperCase() }}
-              </label>
+            <!-- Language Selector -->
+            <div class="flex flex-col md:flex-row items-start md:items-center gap-4 text-sm text-light-text dark:text-dark-text">
+
+              <!-- Radios for vectordb_langs -->
+              <div class="flex gap-4 items-center flex-wrap">
+                <label
+                  v-for="lang in vectordbLangs"
+                  :key="lang"
+                  class="flex items-center gap-1 cursor-pointer px-2 py-1 border rounded-lg hover:bg-light-menu dark:hover:bg-dark-menu transition-colors"
+                >
+                  <input type="radio" :value="lang" v-model="selectedLanguage" class="accent-blue-600" />
+                  {{ lang.toUpperCase() }}
+                </label>
+              </div>
+
+              <!-- Dropdown for other languages -->
+              <div v-if="otherLanguages.length > 0" class="flex items-center gap-2 relative group">
+                <select
+                  v-model="selectedLanguage"
+                  class="rounded-lg border border-light-distinct-text dark:border-dark-distinct-text bg-light-menu dark:bg-dark-menu text-light-text dark:text-dark-text h-8 px-2"
+                >
+                  <option v-for="lang in otherLanguages" :key="lang" :value="lang">
+                    {{ lang.toUpperCase() }}
+                  </option>
+                </select>
+
+                <!-- Info Icon Tooltip -->
+                <div>
+                  <Icon
+                    icon="fluent:info-16-regular"
+                    class="text-blue-600 dark:text-blue-400 cursor-pointer ml-1"
+                  />
+                  <div
+                    class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-80 p-3 bg-light-menu dark:bg-dark-menu text-sm text-light-text dark:text-dark-text rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"
+                  >
+                    <p class="font-semibold mb-3">Language Selection Info</p>
+                    <p class="mb-2">
+                      <strong>Radio buttons</strong> represent languages with dedicated vector datasets. Selecting one queries vectors in that language.
+                    </p>
+                    <p class="mb-2">
+                      <strong>Dropdown menu</strong> shows other languages without dedicated vectors. Selecting one will translate your query to English and search the full vector database.
+                    </p>
+                    <p>
+                      The <strong>'ALL'</strong> option queries the full vector database regardless of language. More languages will be added as dedicated vectors in future releases.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <!-- Dropdown for other languages -->
-            <div v-if="otherLanguages.length > 0" class="flex items-center gap-2 relative group">
-              <select
-                v-model="selectedLanguage"
-                class="rounded-lg border border-light-distinct-text dark:border-dark-distinct-text bg-light-menu dark:bg-dark-menu text-light-text dark:text-dark-text h-8 px-2"
-              >
-                <option v-for="lang in otherLanguages" :key="lang" :value="lang">
-                  {{ lang.toUpperCase() }}
-                </option>
-              </select>
-
-              <!-- Info Icon Tooltip -->
-              <div>
-                <Icon
-                  icon="fluent:info-16-regular"
-                  class="text-blue-600 dark:text-blue-400 cursor-pointer ml-1"
-                />
-                <div
-                  class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-80 p-3 bg-light-menu dark:bg-dark-menu text-sm text-light-text dark:text-dark-text rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"
+            <!-- Items / Properties toggle -->
+            <div class="flex items-center gap-2">
+              <div class="inline-flex h-8 rounded-lg overflow-hidden border border-light-distinct-text dark:border-dark-distinct-text">
+                <button
+                  class="px-3 h-full flex items-center text-base font-medium"
+                  :class="searchType === 'item'
+                    ? 'bg-light-menu dark:bg-dark-menu text-light-text dark:text-dark-text'
+                    : 'bg-transparent text-light-distinct-text dark:text-dark-distinct-text'"
+                  @click="searchType = 'item'"
+                  type="button"
                 >
-                  <p class="font-semibold mb-3">Language Selection Info</p>
-                  <p class="mb-2">
-                    <strong>Radio buttons</strong> represent languages with dedicated vector datasets. Selecting one queries vectors in that language.
-                  </p>
-                  <p class="mb-2">
-                    <strong>Dropdown menu</strong> shows other languages without dedicated vectors. Selecting one will translate your query to English and search the full vector database.
-                  </p>
-                  <p>
-                    The <strong>'ALL'</strong> option queries the full vector database regardless of language. More languages will be added as dedicated vectors in future releases.
-                  </p>
-                </div>
+                  Items
+                </button>
+                <button
+                  class="px-3 h-full flex items-center text-base font-medium"
+                  :class="searchType === 'property'
+                    ? 'bg-light-menu dark:bg-dark-menu text-light-text dark:text-dark-text'
+                    : 'bg-transparent text-light-distinct-text dark:text-dark-distinct-text'"
+                  @click="searchType = 'property'"
+                  type="button"
+                >
+                  Properties
+                </button>
               </div>
             </div>
 
@@ -114,7 +144,7 @@
           <!-- Prototype Warning -->
           <p class="text-sm text-light-text dark:text-dark-text">
             ⚠️ This tool is in early testing, and results may be incomplete or inaccurate. Your queries are sent to a third-party service (JinaAI) for processing, and we store them for up to 90 days for quality improvements. We welcome your feedback! Please help us improve by filling out
-            <a href="https://wikimedia.sslsurvey.de/Wikidata-Vector-DB-Feedback-Survey-1st-Prototype-" target="_blank"
+            <a href="https://wikimedia.sslsurvey.de/Wikidata-Vector-DB-Feedback-Alpha-release" target="_blank"
                class="text-blue-600 dark:text-blue-400 hover:underline">
               our survey
             </a>.
@@ -157,6 +187,7 @@ const error = ref<string>()
 const displayResponse = ref(false)
 const inputFocused = ref(false)
 const showSettings = ref(!apiSecret())
+const searchType = ref<'item' | 'property'>('item')
 
 // Languages
 const vectordbLangs = ref<string[]>([])
@@ -192,8 +223,9 @@ async function search() {
   let lang = selectedLanguage.value.toLowerCase() || 'all'
 
   try {
+    const base = searchType.value === 'property' ? '/property/query' : '/item/query'
     const fetchResult = await fetch(
-      `/item/query/?query=${encodeURIComponent(inputText.value)}&rerank=True&lang=${lang}`,
+      `${base}/?query=${encodeURIComponent(inputText.value)}&rerank=True&lang=${lang}`,
       {
         headers: secret ? { 'x-api-secret': secret } : {}
       }
@@ -211,9 +243,10 @@ async function search() {
       lang = 'en'
     }
 
-    // Add the user query to each result for feedback tracking
+    // Add the user query and lang to each result for feedback tracking
     response.value = jsonResponse.map((r: any) => ({
       ...r,
+      id: r.QID ?? r.PID,
       query: inputText.value,
       lang: lang
     }))
