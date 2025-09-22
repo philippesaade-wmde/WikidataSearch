@@ -65,7 +65,7 @@ app.mount(
 
 search = HybridSearch(os.environ,
                       dest_lang='en',
-                      vectordb_langs=['en', 'fr'])
+                      vectordb_langs=['en', 'fr', 'ar'])
 
 
 @app.get("/", include_in_schema=False)

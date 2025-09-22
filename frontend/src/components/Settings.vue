@@ -96,6 +96,7 @@
       <hr class="border-light-distinct-text dark:border-dark-distinct-text opacity-20" />
 
       <!-- Newsletter Signup -->
+       <!--
       <section class="mt-8">
         <h2 class="text-2xl font-bold mb-6">Stay Updated</h2>
 
@@ -116,7 +117,6 @@
           </button>
         </div>
 
-        <!-- Consent Checkbox -->
         <div class="flex items-center gap-2 mb-2">
           <input type="checkbox" id="consent" v-model="consentGiven" :disabled="emailSent" class="accent-blue-600" />
           <label for="consent" class="text-sm text-light-text dark:text-dark-text">
@@ -128,6 +128,7 @@
           {{ emailMessage }}&nbsp;
         </p>
       </section>
+      -->
 
       <!-- Feedback / User Survey -->
       <section class="mt-8">

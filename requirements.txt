@@ -161,6 +161,8 @@ requests==2.32.5
     #   requests-toolbelt
 requests-toolbelt==1.0.0
     # via langsmith
+setuptools==80.9.0
+    # via wikidatasearch
 six==1.17.0
     # via python-dateutil
 slowapi==0.1.9

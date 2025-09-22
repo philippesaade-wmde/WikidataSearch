@@ -72,7 +72,7 @@ class VectorSearch(Search):
                  dest_lang: str = 'en',
                  vectordb_langs: list = []):
         """
-        Initialize the AstraDBConnect object and embedding model.
+        Initialize the Vector Database connection and embedding model.
 
         Args:
             datastax_token (dict): Credentials for DataStax Astra, including token and API endpoint.
@@ -306,9 +306,9 @@ class KeywordSearch(Search):
 
     def __init__(self):
         """
-        Initialize the AstraDBConnect object with the corresponding embedding model.
+        Initialize nothing!
         """
-        self.lang_detector = Translator()
+        pass
 
     def search(self,
                query: str,
@@ -555,7 +555,7 @@ class HybridSearch(Search):
 
         fused_results = sorted(
             scores.values(),
-            key=lambda x: x['rrf_score'],
+            key=lambda x: (x["rrf_score"], x.get("similarity_score", 0.0)),
             reverse=True
         )
         return fused_results

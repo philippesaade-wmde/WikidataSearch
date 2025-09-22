@@ -186,7 +186,7 @@ const response = ref<ResponseObject[]>()
 const error = ref<string>()
 const displayResponse = ref(false)
 const inputFocused = ref(false)
-const showSettings = ref(!apiSecret())
+const showSettings = ref(true)
 const searchType = ref<'item' | 'property'>('item')
 
 // Languages
