@@ -2,8 +2,9 @@
 
 ## Introduction
 WikidataSearch is a web application and API designed to facilitate the connection between users and the Wikidata Vector Database developed as pasrt of the [Wikidata Embedding Project](https://www.wikidata.org/wiki/Wikidata:Embedding_Project).
-**Link:** [wd-vectordb.wmcloud.org/](https://wd-vectordb.wmcloud.org/)
-**Docs:** [wd-vectordb.wmcloud.org/docs](https://wd-vectordb.wmcloud.org/docs)
+
+**Link:** [wd-vectordb.wmcloud.org/](https://wd-vectordb.wmcloud.org/) \
+**Docs:** [wd-vectordb.wmcloud.org/docs](https://wd-vectordb.wmcloud.org/docs) \
 **Project Page:** [wikidata.org/wiki/Wikidata:Embedding_Project](https://www.wikidata.org/wiki/Wikidata:Embedding_Project)
 
 ## License
