@@ -1,65 +1,14 @@
-# WikidataChat
-Retrieval Augmented Generation (RAG) with for answering question with the Wikidata REST API
+# WikidataSearch
 
 ## Introduction
-WikidataChat is an innovative tool designed to leverage the comprehensive knowledge base of Wikidata, transforming it into a user-friendly question-and-answer chat interface. It aims to provide the general public with validated and cited knowledge directly from Wikidata, reducing the chances of misinformation or "hallucinations" often associated with large language models (LLMs).
+WikidataSearch is a web application and API designed to facilitate the connection between users and the Wikidata Vector Database developed as pasrt of the [Wikidata Embedding Project](https://www.wikidata.org/wiki/Wikidata:Embedding_Project).
 
-## Features
-WikidataChat boasts a unique textification pipeline with the following capabilities:
-- **Search and Download**: Utilizes Google's Serapi search pipeline and Wikidata's REST API to fetch relevant JSON data.
-- **Textification**: Converts Wikidata statements into string statements, preparing them for processing.
-- **RAG Pipeline**: Merges Wikidata string statements with user-provided questions to generate informed and accurate answers through an LLM.
-- **User Interface**: Offers a friendly UI that not only presents answers but also provides linked lists of Wikidata and Wikipedia URLs for further exploration.
-
-![Wikidata and the Meaning of Life](https://github.com/exowanderer/WikidataChat/blob/main/images/wikidatachat_meaning_of_life_example_mar25_2024.png)
-
-## Getting Started
-
-### Prerequisites
-- Docker installed on your system or an active Python environment.
-
-### Docker Installation (Recommended)
-1. Follow these instructions to [install Docker](https://docs.docker.com/engine/install/) on your system.
-
-2. Deploy WikidataChat using Docker with the following commands:
-
-```bash
-DOCKER_BUILDKIT=1 docker build . -t wdchat
-
-docker run  \
-  --env HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN \
-  --env SERAPI_API_KEY=$SERAPI_API_KEY \
-  --volume "$(pwd)/wikidatachat":/workspace/wikidatachat \
-  --volume wdchat_cache:/root/.cache \
-  --publish 8000:8000 \
-  --rm \
-  --interactive \
-  --tty \
-  --name wdchat \
-  wdchat
-```
-
-This will deploy the UI to `localhost:8000`, allowing local access to the WikidataChat interface.
-
-## Usage
-After installation, access the WikidataChat through your web browser by navigating to `localhost:8000`. If deployed on an internet-accessible server, the interface can be accessed from the respective web address, providing a seamless experience for asking questions and receiving answers.
-
-The UI and Haystack functionality were developed with colleagues from Wikimedia Deutschland
-- [Haystack Pipeline: rti](https://github.com/rti/gbnc/)
-- [Vue3 UI: andrewtavis](https://github.com/andrewtavis/gbnc)
-
-## Contributing
-We welcome contributions from the community. Whether it's features, bug fixes, or documentation, here's how you can help:
-1. Fork the repository and create a branch for your contribution. Use descriptive names like `feature/streamlined_rag_pipeline` for features or `bug/localhost_is_blank` for bug fixes.
-2. Submit pull requests with your changes. Make sure your contributions are narrowly defined and clearly described.
-3. Report issues or suggest features using clear and concise titles like `feature_request/include_download_option`.
-
-Please adhere to the Wikimedia Community Universal Code of Conduct when contributing.
+**Webapp:** [wd-vectordb.wmcloud.org/](https://wd-vectordb.wmcloud.org/) \
+**Docs:** [wd-vectordb.wmcloud.org/docs](https://wd-vectordb.wmcloud.org/docs) \
+**Project Page:** [wikidata.org/wiki/Wikidata:Embedding_Project](https://www.wikidata.org/wiki/Wikidata:Embedding_Project)
 
 ## License
-WikidataChat is open-source software licensed under the MIT License. You are free to use, modify, and distribute the software as you wish. We kindly ask for a citation to this repository if you use WikidataChat in your projects.
+WikidataSearch is open-source software licensed under the MIT License. You are free to use, modify, and distribute the software as you wish. We kindly ask for a citation to this repository if you use WikidataSearch in your projects.
 
 ## Contact
 For questions, comments, or discussions, please open an issue on this GitHub repository. We are committed to fostering a welcoming and collaborative community.
-
-![Wikidata and the Meaning of Life](https://github.com/exowanderer/WikidataChat/blob/main/images/WikidataChat_Meaning_of_Life_Graphic.jpg)

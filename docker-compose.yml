@@ -1,0 +1,23 @@
+services:
+  wikidatasearch:
+    build: .
+    env_file:
+      - .env
+    environment:
+    # Astra DB credentials
+      - ASTRA_DB_APPLICATION_TOKEN
+      - ASTRA_DB_API_ENDPOINT
+      - ASTRA_DB_DATABASE_ID
+      - ASTRA_DB_KEYSPACE
+      - ASTRA_DB_COLLECTION
+    # Embedding model API
+      - JINA_API_KEY
+    # API key
+      - API_SECRET
+    container_name: wikidatasearch
+    volumes:
+      - "./wikidatasearch:/workspace/wikidatasearch"
+      - "./data:/workspace/data"
+      - "./frontend:/workspace/frontend"
+    ports:
+      - "8000:8000"

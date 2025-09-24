@@ -1,6 +1,10 @@
-import type { Source } from './source.js'
-
 export interface ResponseObject {
-  answer: string
-  sources?: Source[]
+  id: string
+  similarity_score: number
+  source: string
+  label: string
+  description: string
+  imageUrl: string | null
+  query: string | null
+  lang: string | null
 }
