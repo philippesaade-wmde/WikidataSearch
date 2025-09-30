@@ -18,7 +18,6 @@ class Logger(Base):
     __tablename__ = 'requests'
     id = Column(Integer, primary_key=True, index=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
-    ip = Column(String)
     route = Column(String)
     user_agent = Column(String)
     parameters = Column(String)
@@ -35,7 +34,6 @@ class Logger(Base):
 
             # Add new log entry
             log_entry = Logger(
-                ip=request.client.host,
                 route=request.url.path,
                 user_agent=request.headers.get('user-agent', 'unknown')[:255],
                 parameters=json.dumps(

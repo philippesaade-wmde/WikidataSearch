@@ -4,7 +4,8 @@ export interface ResponseObject {
   source: string
   label: string
   description: string
-  imageUrl: string | null
+  imageUrl: string | undefined
+  imagePageUrl: string | undefined
   query: string | null
   lang: string | null
 }

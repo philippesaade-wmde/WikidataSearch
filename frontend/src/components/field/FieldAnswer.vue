@@ -50,11 +50,28 @@
 
           <!-- Image -->
           <div v-if="r.imageUrl" class="flex-shrink-0 text-lg text-light-muted dark:text-dark-muted">
-            <img
-              class="rounded-2xl max-h-32 shadow-md border border-light-border dark:border-dark-border"
-              :src="r.imageUrl"
-              :alt="r.label"
-            />
+            <a
+              :href="r.imagePageUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View this image on Wikimedia Commons"
+            >
+              <img
+                class="rounded-2xl max-h-32 shadow-md border border-light-border dark:border-dark-border"
+                :src="r.imageUrl"
+                :alt="r.label"
+              />
+            </a>
+            <p class="mt-1 text-xs text-center text-light-text dark:text-dark-text">
+              <a
+                :href="r.imagePageUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="underline"
+              >
+                From Wikimedia Commons
+              </a>
+            </p>
           </div>
         </a>
       </div>
@@ -113,6 +130,14 @@ const fetchWikidataInfo = async () => {
       const imageName = entity?.claims?.P18?.[0]?.mainsnak?.datavalue?.value || null
       const lang = r.lang?.toLowerCase() || 'en'
 
+      const filePathUrl = imageName
+      ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(imageName)}`
+      : undefined
+
+      const imagePageUrl = imageName
+        ? `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(imageName.replace(/ /g, '_'))}`
+        : undefined
+
       return {
         ...r,
         label:
@@ -124,9 +149,8 @@ const fetchWikidataInfo = async () => {
           entity?.descriptions?.mul?.value ||
           entity?.descriptions?.en?.value ||
           'No description available',
-        imageUrl: imageName
-          ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(imageName)}`
-          : null,
+        imageUrl: filePathUrl,
+        imagePageUrl: imagePageUrl,
         query: r.query // preserve the query for feedback
       }
     })

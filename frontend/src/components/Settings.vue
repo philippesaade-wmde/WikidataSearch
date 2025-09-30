@@ -27,16 +27,14 @@
         </a>
         <div>
           <h1 class="text-3xl sm:text-4xl font-bold">
-            <a href="https://www.wikidata.org/wiki/Wikidata:Embedding_Project" target="_blank" class="hover:underline">
-              Wikidata Embedding Project
-            </a>
+              Wikidata Vector Database
           </h1>
           <p class="text-lg text-light-text dark:text-dark-text leading-relaxed mt-2">
+            The Wikidata Vector Database, part of the 
             <a href="https://www.wikidata.org/wiki/Wikidata:Embedding_Project" target="_blank"
                class="text-blue-600 dark:text-blue-400 hover:underline">
-              The Wikidata Embedding Project
-            </a>
-            aims to build a vector database on top of Wikidata, enabling semantic search that retrieves items based on contextual meaning.
+              Wikidata Embedding Project
+            </a>, stores semantic embeddings of Wikidata entities to enable context-aware search using vector similarity.
           </p>
         </div>
       </div>
@@ -276,7 +274,7 @@
           </a>
           <a href="https://www.wikidata.org/wiki/Wikidata:Embedding_Project" target="_blank"
              class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
-            Wikidata Embedding Project
+            Project Page
           </a>
         </div>
 

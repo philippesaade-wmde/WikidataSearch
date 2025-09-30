@@ -4,10 +4,10 @@
     <!-- Settings Modal -->
     <Settings v-if="showSettings" @close="showSettings = false" />
 
-    <!-- Settings Icon -->
+    <!-- Home Icon -->
     <Icon
       class="text-4xl absolute right-4 top-4 cursor-pointer text-light-text dark:text-dark-text hover:text-light-distinct-text dark:hover:text-dark-distinct-text transition-colors"
-      icon="fluent:line-horizontal-3-24-filled"
+      icon="mdi:home"
       @click="showSettings = true"
     />
 
@@ -24,9 +24,7 @@
         </a>
         <div>
           <h1 class="text-5xl font-bold py-2">
-            <a href="https://www.wikidata.org/wiki/Wikidata:Embedding_Project" target="_blank" class="hover:underline block">
-              Wikidata Embedding Project
-            </a>
+              Wikidata Vector Database
           </h1>
         </div>
       </div>
