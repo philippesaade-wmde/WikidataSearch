@@ -20,4 +20,4 @@ services:
       - "./data:/workspace/data"
       - "./frontend:/workspace/frontend"
     ports:
-      - "8000:8000"
+      - "8080:8080"
