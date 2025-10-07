@@ -54,8 +54,12 @@ class Search(ABC):
             'external_ids': False,
             'format': format
         }
+        headers = {
+            'User-Agent': 'Wikidata Vector Database/Alpha Version (embedding@wikimedia.de)'
+        }
+
         url = "https://wd-textify.toolforge.org"
-        results = requests.get(url, params=params)
+        results = requests.get(url, params=params, headers=headers)
         results.raise_for_status()
 
         text = results.json()
@@ -339,7 +343,9 @@ class KeywordSearch(Search):
             'search': query,
             'srlimit': K
         }
-        headers = {'User-Agent': 'Wikidata Vector Database'}
+        headers = {
+            'User-Agent': 'Wikidata Vector Database/Alpha Version (embedding@wikimedia.de)'
+        }
 
         if filter.get("metadata.IsItem", False):
             params['ns0'] = 1

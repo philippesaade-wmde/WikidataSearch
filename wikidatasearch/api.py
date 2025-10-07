@@ -67,7 +67,21 @@ search = HybridSearch(os.environ,
                       dest_lang='en',
                       vectordb_langs=['en', 'fr', 'ar'])
 
+def invalid_user_agent(request: Request):
+    """
+    Returns True if user-agent is invalid/non-descriptive.
+    Blocks generic HTTP clients.
+    """
+    user_agent = request.headers.get('user-agent', '').strip()
 
+    # Check if exists, has space, and is long enough
+    return (
+        not user_agent or
+        ' ' not in user_agent or
+        len(user_agent) < 10
+    )
+
+@limiter.limit("10/minute")
 @app.get("/", include_in_schema=False)
 async def root(request: Request, background_tasks: BackgroundTasks):
     """
@@ -80,9 +94,9 @@ async def root(request: Request, background_tasks: BackgroundTasks):
     background_tasks.add_task(Logger.add_request, request, '', 200, 0)
     return FileResponse(f"{FRONTEND_STATIC_DIR}/index.html")
 
-
+@limiter.limit("10/minute")
 @app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
+async def favicon(request: Request):
     """
     Serve the favicon.ico file.
 
@@ -91,8 +105,9 @@ async def favicon():
     """
     return FileResponse(f"{FRONTEND_STATIC_DIR}/favicon.ico")
 
+@limiter.limit("10/minute")
 @app.get("/languages", include_in_schema=False)
-async def languages():
+async def languages(request: Request):
     vectordb_langs = set(search.vectorsearch.vectordb_langs)
     other_langs = set(search.vectorsearch.translator.mint_langs)
     other_langs = other_langs - vectordb_langs
@@ -101,6 +116,7 @@ async def languages():
         'other_langs': sorted(list(other_langs))
     }
 
+@limiter.limit("10/minute")
 @app.post("/feedback", include_in_schema=False)
 async def feedback(
     request: Request,
@@ -168,8 +184,8 @@ async def item_query_route(
     """
 
     start_time = time.time()
-    if not request.headers.get('user-agent'):
-        response = "User-Agent is required"
+    if invalid_user_agent(request):
+        response = "A more descriptive User-Agent is required"
         background_tasks.add_task(Logger.add_request, request, response, 400, start_time)
         raise HTTPException(status_code=400, detail=response)
 
@@ -272,8 +288,8 @@ async def property_query_route(
     """
 
     start_time = time.time()
-    if not request.headers.get('user-agent'):
-        response = "User-Agent is required"
+    if invalid_user_agent(request):
+        response = "A more descriptive User-Agent is required"
         background_tasks.add_task(Logger.add_request, request, response, 400, start_time)
         raise HTTPException(status_code=400, detail=response)
 
@@ -372,8 +388,8 @@ async def similarity_score_route(
     """
 
     start_time = time.time()
-    if not request.headers.get('user-agent'):
-        response = "User-Agent is required"
+    if invalid_user_agent(request):
+        response = "A more descriptive User-Agent is required"
         background_tasks.add_task(Logger.add_request, request, response, 400, start_time)
         raise HTTPException(status_code=400, detail=response)
 

@@ -45,6 +45,28 @@
                   👎 <p class="text-sm">Not Helpful</p>
                 </button>
               </template>
+
+              <!-- Info icon + tooltip -->
+              <div
+                class="relative group ml-1 inline-flex items-center"
+                tabindex="0"
+                aria-label="Feedback info"
+                @click.stop
+              >
+                <Icon
+                  icon="fluent:info-16-regular"
+                  class="text-blue-600 dark:text-blue-400 cursor-pointer"
+                />
+                <div
+                  class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-64 p-2
+                        bg-light-menu dark:bg-dark-menu text-xs text-light-text dark:text-dark-text
+                        rounded shadow-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
+                        transition-opacity z-10 pointer-events-none"
+                  role="tooltip"
+                >
+                  Feedback is anonymous and only used for evaluation purposes.
+                </div>
+              </div>
             </div>
           </div>
 
@@ -81,6 +103,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import type { ResponseObject } from '../../types/response-object.d.ts'
 
 const props = defineProps<{

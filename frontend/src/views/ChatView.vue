@@ -29,33 +29,74 @@
         </div>
       </div>
 
-      <!-- Input + Send Button -->
       <div class="flex justify-center w-full">
         <div class="flex flex-col w-full md:w-4/5 space-y-4">
 
-          <div class="relative flex text-2xl rounded-lg bg-light-menu dark:bg-dark-menu elem-shadow-sm">
-            <input
-              v-model="inputText"
-              type="text"
-              class="w-full pl-4 bg-transparent rounded-lg h-12 placeholder:text-light-distinct-text dark:placeholder:text-dark-distinct-text text-light-text dark:text-dark-text"
-              :placeholder="$t('chat-prompt')"
-              autocomplete="off"
-              @keyup.enter="inputText.length > 0 ? search() : {}"
-              @focus="inputFocused = true"
-              @blur="inputFocused = false"
-            />
-            <Icon
-              class="absolute -translate-y-1/2 right-3 top-1/2"
-              :class="{
-                'text-light-text dark:text-dark-text': inputFocused && inputText.length === 0,
-                'text-light-text dark:text-dark-text hover:text-light-distinct-text dark:hover:text-dark-distinct-text hover:cursor-pointer':
-                  inputFocused && inputText.length > 0,
-                'text-light-distinct-text dark:text-dark-distinct-text': !inputFocused
-              }"
-              icon="fluent:send-24-filled"
-              size="2em"
-              @click="inputText.length > 0 ? search() : {}"
-            />
+          <!-- Search bar + Info -->
+          <div class="flex flex-nowrap items-center gap-3">
+            <!-- Search bar (unchanged design) -->
+            <div class="relative flex-1 min-w-0 text-2xl rounded-lg bg-light-menu dark:bg-dark-menu elem-shadow-sm">
+              <input
+                v-model="inputText"
+                type="text"
+                class="w-full pl-4 pr-24 bg-transparent rounded-lg h-12 placeholder:text-light-distinct-text dark:placeholder:text-dark-distinct-text text-light-text dark:text-dark-text"
+                :placeholder="$t('chat-prompt')"
+                autocomplete="off"
+                @keyup.enter="inputText.length > 0 ? search() : {}"
+                @focus="inputFocused = true"
+                @blur="inputFocused = false"
+              />
+              <!-- Send icon stays inside the bar -->
+              <Icon
+                class="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                :class="{
+                  'text-light-text dark:text-dark-text': inputFocused && inputText.length === 0,
+                  'text-light-text dark:text-dark-text hover:text-light-distinct-text dark:hover:text-dark-distinct-text':
+                    inputFocused && inputText.length > 0,
+                  'text-light-distinct-text dark:text-dark-distinct-text': !inputFocused
+                }"
+                icon="fluent:send-24-filled"
+                size="2em"
+                @click="inputText.length > 0 ? search() : {}"
+              />
+            </div>
+
+            <!-- Info icon + How to query -->
+            <div class="relative group inline-flex items-center shrink-0" tabindex="0" aria-label="How to search">
+              <Icon
+                icon="fluent:info-16-regular"
+                class="text-blue-600 dark:text-blue-400 cursor-pointer"
+                size="2.5em"
+              />
+              <div
+                class="absolute right-0 top-full mt-2 w-[28rem] max-w-[90vw] p-3 bg-light-menu dark:bg-dark-menu
+                      text-sm text-light-text dark:text-dark-text rounded shadow-lg z-20 opacity-0
+                      group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none"
+                role="tooltip"
+              >
+                <p class="font-semibold mb-2">How vector search works</p>
+
+                <p class="text-sm mb-1">What it does:</p>
+                <ul class="list-disc pl-5 space-y-1">
+                  <li>Explore Wikidata entities</li>
+                  <li>Fuzzy search by meaning and context</li>
+                  <li>Surface similar items</li>
+                </ul>
+
+                <p class="text-sm mt-2 mb-1">What it doesn't do:</p>
+                <ul class="list-disc pl-5 space-y-1">
+                  <li>Answer questions (Use results to investigate further)</li>
+                  <li>Return complete lists (Use SPARQL for that)</li>
+                </ul>
+
+                <p class="text-sm mt-2 mb-1">Examples:</p>
+                <ul class="list-disc pl-5 space-y-1">
+                  <li><code>English science-fiction novel</code></li>
+                  <li><code>Q42</code></li>
+                  <li><code>Who wrote Hitchhiker's Guide to the Galaxy?</code></li>
+                </ul>
+              </div>
+            </div>
           </div>
 
           <!-- Controls -->
