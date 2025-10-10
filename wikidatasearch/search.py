@@ -338,6 +338,12 @@ class KeywordSearch(Search):
 
         query = self._clean_query(query, lang)
 
+        if filter.get("metadata.InstanceOf"):
+            instance_of_filter = filter.get("metadata.InstanceOf")['$in']
+            instance_of_filter = '|P31='.join(instance_of_filter)
+            instance_of_filter = "haswbstatement:P31=" + instance_of_filter
+            query = query + " " + instance_of_filter
+
         params = {
             'cirrusDumpResult': '',
             'search': query,

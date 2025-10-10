@@ -59,7 +59,7 @@
                 />
                 <div
                   class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-64 p-2
-                        bg-light-menu dark:bg-dark-menu text-xs text-light-text dark:text-dark-text
+                        bg-light-menu dark:bg-dark-menu text-sm text-light-text dark:text-dark-text
                         rounded shadow-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
                         transition-opacity z-10 pointer-events-none"
                   role="tooltip"
