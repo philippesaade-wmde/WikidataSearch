@@ -2,17 +2,18 @@ from sqlalchemy import create_engine, Column, String, Integer, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta
+import traceback
 import json
 import time
 import os
 
 TOOL_DATA_DIR = os.environ.get("TOOL_DATA_DIR", "./data")
-DATABASE_URL = os.path.join(TOOL_DATA_DIR, 'request_logs.db')
-DATABASE_URL = f"sqlite:///{DATABASE_URL}"
+DB_URL = os.path.join(TOOL_DATA_DIR, 'request_logs.db')
+SQLA_URL = f"sqlite:///{DB_URL}"
 Base = declarative_base()
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-Session = sessionmaker(bind=engine)
+engine = create_engine(SQLA_URL, connect_args={"check_same_thread": False})
+Session = sessionmaker(bind=engine, expire_on_commit=False)
 
 class Logger(Base):
     __tablename__ = 'requests'
@@ -28,27 +29,31 @@ class Logger(Base):
     @staticmethod
     def add_request(request, response, status_code, start_time):
         with Session() as session:
-            # Clean up old logs (older than 90 days)
-            cutoff_date = datetime.utcnow() - timedelta(days=90)
-            session.query(Logger).filter(Logger.timestamp < cutoff_date).delete()
+            try:
+                # Clean up old logs (older than 90 days)
+                cutoff_date = datetime.utcnow() - timedelta(days=90)
+                session.query(Logger).filter(Logger.timestamp < cutoff_date).delete()
 
-            # Add new log entry
-            log_entry = Logger(
-                route=request.url.path,
-                user_agent=request.headers.get('user-agent', 'unknown')[:255],
-                parameters=json.dumps(
-                    dict(request.query_params),
-                    separators=(',', ':')
-                ),
-                status=status_code,
-                response=json.dumps(
-                    response,
-                    separators=(',', ':')
-                ),
-                response_time=time.time() - start_time
-            )
-            session.add(log_entry)
-            session.commit()
+                # Add new log entry
+                log_entry = Logger(
+                    route=request.url.path,
+                    user_agent=request.headers.get('user-agent', 'unknown')[:255],
+                    parameters=json.dumps(
+                        dict(request.query_params),
+                        separators=(',', ':')
+                    ),
+                    status=status_code,
+                    response=json.dumps(
+                        response,
+                        separators=(',', ':')
+                    ),
+                    response_time=time.time() - start_time
+                )
+                session.add(log_entry)
+                session.commit()
+            except Exception as e:
+                session.rollback()
+                traceback.print_exc()
 
 class Feedback(Base):
     __tablename__ = 'feedback'
@@ -61,14 +66,18 @@ class Feedback(Base):
     @staticmethod
     def add_feedback(query, qid, sentiment, index):
         with Session() as session:
-            # Add new feedback
-            feedback_entry = Feedback(
-                query=query,
-                qid=qid,
-                sentiment=sentiment,
-                index=index,
-            )
-            session.add(feedback_entry)
-            session.commit()
+            try:
+                # Add new feedback
+                feedback_entry = Feedback(
+                    query=query,
+                    qid=qid,
+                    sentiment=sentiment,
+                    index=index,
+                )
+                session.add(feedback_entry)
+                session.commit()
+            except Exception as e:
+                session.rollback()
+                traceback.print_exc()
 
 Base.metadata.create_all(bind=engine)

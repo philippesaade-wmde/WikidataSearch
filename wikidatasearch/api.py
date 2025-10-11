@@ -17,13 +17,43 @@ from fastapi_cache.decorator import cache
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from gradio.routes import mount_gradio_app
+
 from .logger import Logger, Feedback
 from .search import HybridSearch
+from .analytics import build_analytics_app
 
-# Retrieve the frontend static directory path from environment variables, falling back to a default if not set.
+######################################
+# Configuration
+######################################
+
 FRONTEND_STATIC_DIR = os.environ.get("FRONTEND_STATIC_DIR", "./frontend/dist")
 API_SECRET = os.environ.get("API_SECRET")
+ANALYTICS_SECRET = os.environ.get("ANALYTICS_API_SECRET")
 CACHE_TTL = 180  # 3 minutes
+
+search = HybridSearch(os.environ,
+                      dest_lang='en',
+                      vectordb_langs=['en', 'fr', 'ar']
+                      )
+
+def invalid_user_agent(request: Request):
+    """
+    Returns True if user-agent is invalid/non-descriptive.
+    Blocks generic HTTP clients.
+    """
+    user_agent = request.headers.get('user-agent', '').strip()
+
+    # Check if exists, has space, and is long enough
+    return (
+        not user_agent or
+        ' ' not in user_agent or
+        len(user_agent) < 10
+    )
+
+######################################
+# Main app setup
+######################################
 
 app = FastAPI(
     title="Wikidata Vector Search",
@@ -55,31 +85,16 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 async def startup_event():
     FastAPICache.init(InMemoryBackend(), prefix="wikidata-cache")
 
-# Serve static files from the '/assets' endpoint,
-#   pulling from the frontend static directory.
+######################################
+# Routes for the UI
+######################################
+
+# Serve static files from the '/assets' endpoint
 app.mount(
     "/assets",
     StaticFiles(directory=f"{FRONTEND_STATIC_DIR}/assets"),
     name="frontend-assets",
 )
-
-search = HybridSearch(os.environ,
-                      dest_lang='en',
-                      vectordb_langs=['en', 'fr', 'ar'])
-
-def invalid_user_agent(request: Request):
-    """
-    Returns True if user-agent is invalid/non-descriptive.
-    Blocks generic HTTP clients.
-    """
-    user_agent = request.headers.get('user-agent', '').strip()
-
-    # Check if exists, has space, and is long enough
-    return (
-        not user_agent or
-        ' ' not in user_agent or
-        len(user_agent) < 10
-    )
 
 @limiter.limit("10/minute")
 @app.get("/", include_in_schema=False)
@@ -91,7 +106,9 @@ async def root(request: Request, background_tasks: BackgroundTasks):
         FileResponse: The index.html file from the frontend static directory.
     """
 
-    background_tasks.add_task(Logger.add_request, request, '', 200, 0)
+    background_tasks.add_task(
+        Logger.add_request, request, '', 200, time.time()
+    )
     return FileResponse(f"{FRONTEND_STATIC_DIR}/index.html")
 
 @limiter.limit("10/minute")
@@ -127,6 +144,11 @@ async def feedback(
 
     Feedback.add_feedback(query, id, sentiment, index)
     return True
+
+
+######################################
+# Routes for the API
+######################################
 
 @app.get(
     "/item/query/",
@@ -186,17 +208,17 @@ async def item_query_route(
     start_time = time.time()
     if invalid_user_agent(request):
         response = "A more descriptive User-Agent is required"
-        background_tasks.add_task(Logger.add_request, request, response, 400, start_time)
+        Logger.add_request(request, response, 400, start_time)
         raise HTTPException(status_code=400, detail=response)
 
     if API_SECRET and (API_SECRET != x_api_secret):
         response = "X-API-SECRET incorrect or missing"
-        background_tasks.add_task(Logger.add_request, request, response, 401, start_time)
+        Logger.add_request(request, response, 401, start_time)
         raise HTTPException(status_code=401, detail=response)
 
     if not query:
         response = "Query is missing"
-        background_tasks.add_task(Logger.add_request, request, response, 422, start_time)
+        Logger.add_request(request, response, 422, start_time)
         raise HTTPException(status_code=422, detail=response)
 
     filter={"metadata.IsItem": True}
@@ -219,10 +241,12 @@ async def item_query_route(
 
         results = results[:K]
 
-        background_tasks.add_task(Logger.add_request, request, 'Results', 200, start_time)
+        background_tasks.add_task(
+            Logger.add_request, request, 'Results', 200, start_time
+        )
         return results
     except Exception as e:
-        background_tasks.add_task(Logger.add_request, request, str(e), 500, start_time)
+        Logger.add_request(request, str(e), 500, start_time)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
@@ -290,17 +314,17 @@ async def property_query_route(
     start_time = time.time()
     if invalid_user_agent(request):
         response = "A more descriptive User-Agent is required"
-        background_tasks.add_task(Logger.add_request, request, response, 400, start_time)
+        Logger.add_request(request, response, 400, start_time)
         raise HTTPException(status_code=400, detail=response)
 
     if API_SECRET and (API_SECRET != x_api_secret):
         response = "X-API-SECRET incorrect or missing"
-        background_tasks.add_task(Logger.add_request, request, response, 401, start_time)
+        Logger.add_request(request, response, 401, start_time)
         raise HTTPException(status_code=401, detail=response)
 
     if not query:
         response = "Query is missing"
-        background_tasks.add_task(Logger.add_request, request, response, 422, start_time)
+        Logger.add_request(request, response, 422, start_time)
         raise HTTPException(status_code=422, detail=response)
 
     filter={"metadata.IsProperty": True}
@@ -323,10 +347,12 @@ async def property_query_route(
 
         results = results[:K]
 
-        background_tasks.add_task(Logger.add_request, request, 'Results', 200, start_time)
+        background_tasks.add_task(
+            Logger.add_request, request, 'Results', 200, start_time
+        )
         return results
     except Exception as e:
-        background_tasks.add_task(Logger.add_request, request, str(e), 500, start_time)
+        Logger.add_request(request, str(e), 500, start_time)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
@@ -390,22 +416,22 @@ async def similarity_score_route(
     start_time = time.time()
     if invalid_user_agent(request):
         response = "A more descriptive User-Agent is required"
-        background_tasks.add_task(Logger.add_request, request, response, 400, start_time)
+        Logger.add_request(request, response, 400, start_time)
         raise HTTPException(status_code=400, detail=response)
 
     if API_SECRET and (API_SECRET != x_api_secret):
         response = "X-API-SECRET incorrect or missing"
-        background_tasks.add_task(Logger.add_request, request, response, 401, start_time)
+        Logger.add_request(request, response, 401, start_time)
         raise HTTPException(status_code=401, detail=response)
 
     if not query:
         response = "Query is missing"
-        background_tasks.add_task(Logger.add_request, request, response, 422, start_time)
+        Logger.add_request(request, response, 422, start_time)
         raise HTTPException(status_code=422, detail=response)
 
     if not qid:
         response = "QIDs are missing"
-        background_tasks.add_task(Logger.add_request, request, response, 422, start_time)
+        Logger.add_request(request, response, 422, start_time)
         raise HTTPException(status_code=422, detail=response)
 
     try:
@@ -419,9 +445,22 @@ async def similarity_score_route(
             return_vectors=return_vectors
         )
 
-        background_tasks.add_task(Logger.add_request, request, 'Results', 200, start_time)
+        background_tasks.add_task(
+            Logger.add_request, request, 'Results', 200, start_time
+        )
         return results
     except Exception as e:
-        background_tasks.add_task(Logger.add_request, request, str(e), 500, start_time)
+        Logger.add_request(request, str(e), 500, start_time)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+######################################
+# Admin app for analytics
+######################################
+
+if ANALYTICS_SECRET:
+    mount_gradio_app(
+        app,
+        build_analytics_app(),
+        path=f"/admin/{ANALYTICS_SECRET}"
+    )
