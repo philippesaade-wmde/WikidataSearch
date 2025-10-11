@@ -294,13 +294,19 @@ def build_analytics_app():
             route_dd, status_dd, ua_inc, ua_exc, rerank_dd, langs_dd
         ]
 
-        btn.click(fn=_run_query, inputs=inputs, outputs=[ts_plot, bar_plot, table])
+        btn.click(
+            fn=_run_query,
+            inputs=inputs,
+            outputs=[ts_plot, bar_plot, table],
+            queue=False,
+        )
 
         gr.on(
             triggers=[x.change for x in inputs],
             fn=_run_query,
             inputs=inputs,
             outputs=[ts_plot, bar_plot, table],
+            queue=False,
         )
 
     return demo
