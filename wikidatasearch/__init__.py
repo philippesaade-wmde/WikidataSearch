@@ -1,5 +1,3 @@
-from .jina import *
-from .search import *
-from .translator import *
-from .logger import *
-from .api import *
+from .main import app
+
+__all__ = ["app"]

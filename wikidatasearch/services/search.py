@@ -548,7 +548,6 @@ class HybridSearch(Search):
                         **item,
                         'rrf_score': rrf_score,
                         'source': source_name,
-                        'source_rank': rank
                     }
 
                 else:
@@ -558,12 +557,8 @@ class HybridSearch(Search):
                     )
                     scores[ID]['rrf_score'] += rrf_score
 
-                    if rank < scores[ID]['source_rank']:
-                        scores[ID]['source'] = source_name
-                        scores[ID]['source_rank'] = rank
-
-        for v in scores.values():
-            v.pop('source_rank', None)
+                    if source_name not in scores[ID]['source']:
+                        scores[ID]['source'] += ", " + source_name
 
         fused_results = sorted(
             scores.values(),
