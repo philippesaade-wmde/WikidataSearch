@@ -47,6 +47,7 @@ router = APIRouter(
     summary="Compute similarity scores for specific Wikidata QIDs",
     operation_id="similarityScoreQuery",
     response_model=List[SimilarityScore],
+    response_model_exclude_none=True,
 )
 @cache(expire=settings.CACHE_TTL)
 @limiter.limit(settings.RATE_LIMIT)

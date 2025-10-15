@@ -553,12 +553,12 @@ class HybridSearch(Search):
                 else:
                     scores[ID]['similarity_score'] = max(
                         similarity_score,
-                        scores[ID].get('similarity_score', 0)
+                        scores[ID].get('similarity_score', 0.0)
                     )
                     scores[ID]['rrf_score'] += rrf_score
 
                     if source_name not in scores[ID]['source']:
-                        scores[ID]['source'] += ", " + source_name
+                        scores[ID]['source'] += f", {source_name}"
 
         fused_results = sorted(
             scores.values(),

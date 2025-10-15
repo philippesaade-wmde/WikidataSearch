@@ -13,8 +13,8 @@ from ..services.logger import Logger
 class PropertyQuery(BaseModel):
     PID: str = Field(..., example="P31", description="Wikidata property PID")
     similarity_score: float = Field(..., example=0.89, description="Dot product similarity")
-    rrf_score: Optional[float] = Field(None, example=7.20, description="Reciprocal Rank Fusion score")
-    source: Optional[str] = Field(None, example="Keyword Search, Vector Search")
+    rrf_score: Optional[float] = Field(0.0, example=7.20, description="Reciprocal Rank Fusion score")
+    source: Optional[str] = Field('', example="Keyword Search, Vector Search")
     vector: Optional[list[float]] = Field(None, description="Present when return_vectors is True")
     reranker_score: Optional[float] = Field(None, description="Present when rerank is True")
 
@@ -54,6 +54,7 @@ router = APIRouter(
     summary="Search Wikidata properties with vector and keyword (RRF)",
     operation_id="searchPropertiesRRF",
     response_model=List[PropertyQuery],
+    response_model_exclude_none=True,
 )
 @cache(expire=settings.CACHE_TTL)
 @limiter.limit(settings.RATE_LIMIT)
