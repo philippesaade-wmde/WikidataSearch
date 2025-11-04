@@ -16,7 +16,7 @@ from .logger import engine
 # ----------------------------
 
 Period = Literal["Hour", "Day", "Week", "Month"]
-GroupBy = Literal["None", "route", "user_agent", "status", "rerank", "lang"]
+GroupBy = Literal["None", "route", "user_agent", "status", "rerank", "lang", "client"]
 PERIOD_FREQ = {"Hour": "H", "Day": "D", "Week": "W", "Month": "M"}
 PARAM_KEYS = ("rerank", "lang")
 
@@ -173,6 +173,13 @@ def aggregate_requests(df: pd.DataFrame, period: Period, group_by: GroupBy) -> p
         return df
     freq = PERIOD_FREQ[period]
     df = df.copy()
+
+    # Derived grouping: browser vs API based on UA
+    if group_by == "client":
+        ua = df.get("user_agent", pd.Series(index=df.index, dtype=object)).fillna("")
+        is_browser = ua.str.contains("mozilla", case=False, na=False)
+        df["client"] = is_browser.map({True: "browser", False: "api"})
+
     df = df.set_index("timestamp")
 
     if group_by == "None":
@@ -316,7 +323,7 @@ def build_analytics_app():
             end_dt = gr.DateTime(label="End UTC", value=now, interactive=True)
             period = gr.Dropdown(choices=list(PERIOD_FREQ.keys()), value="Day", label="Time bucket")
             group_by = gr.Dropdown(
-                choices=["None", "route", "user_agent", "status", "rerank", "lang"],
+                choices=["None", "route", "user_agent", "status", "rerank", "lang", "client"],
                 value="None",
                 label="Group by",
             )

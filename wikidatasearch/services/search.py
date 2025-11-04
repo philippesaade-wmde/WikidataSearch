@@ -138,17 +138,23 @@ class VectorSearch(Search):
                     return []
             else:
                 ID_name = 'QID' if query.startswith('Q') else 'PID'
-                item_output = {
-                    ID_name: query,
-                    'similarity_score': 1.0
-                }
-                if return_vectors:
-                    item_output['vector'] = embedding
-                if return_text:
-                    item_output['text'] = item['content']
 
-                output.append(item_output)
-                seen_qids.add(query)
+                # Do not include the entity if it does not match the filter.
+                item_search = (ID_name == 'QID') and (filter.get("metadata.IsItem", False))
+                property_search = (ID_name == 'PID') and (filter.get("metadata.IsProperty", False))
+
+                if item_search or property_search:
+                    item_output = {
+                        ID_name: query,
+                        'similarity_score': 1.0
+                    }
+                    if return_vectors:
+                        item_output['vector'] = embedding
+                    if return_text:
+                        item_output['text'] = item['content']
+
+                    output.append(item_output)
+                    seen_qids.add(query)
 
         if not embedding:
             try:

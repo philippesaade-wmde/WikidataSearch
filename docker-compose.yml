@@ -14,6 +14,7 @@ services:
       - JINA_API_KEY
     # API key
       - API_SECRET
+      - ANALYTICS_API_SECRET
     container_name: wikidatasearch
     volumes:
       - "./wikidatasearch:/workspace/wikidatasearch"
