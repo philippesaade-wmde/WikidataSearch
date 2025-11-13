@@ -73,7 +73,7 @@ async def property_query_route(
         description='Comma separated QIDs to filter by "instance of" class for the property domain.',
     ),
     rerank: bool = Query(False, description="If true, apply a reranker model."),
-    return_vectors: bool = Query(False, description="If true, include vectors of Wikidata properties"),
+    return_vectors: bool = Query(False, description="Temporarily unavailable pending internal review."),
 ):
     """
     Performs vector and keyword search on Wikidata properties, combining results using Reciprocal Rank Fusion (RRF) or an optional reranker model.
@@ -123,6 +123,7 @@ async def property_query_route(
         filt["metadata.InstanceOf"] = {"$in": qids}
 
     try:
+        return_vectors = False  # Temporarily disable pending internal review.
         results = SEARCH.search(
             query,
             filter=filt,

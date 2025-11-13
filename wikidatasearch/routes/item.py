@@ -73,7 +73,7 @@ async def item_query_route(
             description='Comma separated QIDs to filter by "instance of".',
         ),
         rerank: bool = Query(False, description="If true, apply a reranker model."),
-        return_vectors: bool = Query(False, description="If true, include vectors of Wikidata items"),
+        return_vectors: bool = Query(False, description="Temporarily unavailable pending internal review."),
     ):
     """
     Performs vector and keyword search on Wikidata items, combining results using Reciprocal Rank Fusion (RRF) or an optional reranker model.
@@ -122,7 +122,7 @@ async def item_query_route(
         filt["metadata.InstanceOf"] = {"$in": qids}
 
     try:
-
+        return_vectors = False  # Temporarily disable pending internal review.
         results = SEARCH.search(
             query,
             filter=filt,
@@ -135,6 +135,7 @@ async def item_query_route(
 
         results = results[:K]
         background_tasks.add_task(Logger.add_request, request, "Results", 200, start_time)
+
         return results
 
     except Exception as e:

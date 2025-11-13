@@ -62,7 +62,7 @@ async def similarity_score_route(
                     'If a specific language is provided, only vectors in that language are used. '
                     'If no vectors exist for that language, the query will be translated to English and compared against all vectors.',
     ),
-    return_vectors: bool = Query(False, description="If True, include vector embeddings in the response."),
+    return_vectors: bool = Query(False, description="Temporarily unavailable pending internal review."),
 ):
     """
     Computes the similarity score between a query and a specified list of Wikidata entities.
@@ -108,6 +108,7 @@ async def similarity_score_route(
             Logger.add_request(request, detail, 422, start_time)
             raise HTTPException(status_code=422, detail=detail)
 
+        return_vectors = False  # Temporarily disable pending internal review.
         results = SEARCH.vectorsearch.get_similarity_scores(
             query=query,
             qids=qids,
