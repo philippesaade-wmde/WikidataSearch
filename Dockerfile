@@ -30,4 +30,4 @@ RUN uv sync --locked
 COPY wikidatasearch ./wikidatasearch
 
 # Container start script
-CMD [ "uv", "run", "uvicorn", "wikidatasearch:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4" ]
+CMD [ "uv", "run", "uvicorn", "wikidatasearch:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1" ]
