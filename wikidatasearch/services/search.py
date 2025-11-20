@@ -63,7 +63,7 @@ class Search(ABC):
         results.raise_for_status()
 
         text = results.json()
-        assert isinstance(text, str)
+        print(text)
         return text
 
 
@@ -496,26 +496,17 @@ class HybridSearch(Search):
 
         if rerank:
             # Rerank the results with the current Wikidata values.
-            def _fetch_text(i, r):
-                try:
-                    rid = r.get('QID', r.get('PID'))
-                    r['text'] = self.get_text_by_id(
-                        rid,
-                        format='triplet',
-                        lang=lang
-                    )
-                except Exception as e:
-                    print(f"Error fetching text for {rid}: {e}")
-                    # If fetching text fails, keep the original result
-                    pass
-                return i, r
 
-            with ThreadPoolExecutor(max_workers=min(4, len(results))) as ex:
-                futs = [ex.submit(_fetch_text, i, results[i]) \
-                         for i in range(len(results))]
-                for fut in as_completed(futs):
-                    i, updated = fut.result()
-                    results[i] = updated
+            ids = [r.get('QID', r.get('PID')) for r in results]
+            wd_data = self.get_text_by_id(
+                ','.join(ids),
+                format='triplet',
+                lang=lang
+            )
+            for i in range(len(results)):
+                rid = results[i].get('QID', results[i].get('PID'))
+                if rid in wd_data:
+                    results[i]['text'] = wd_data[rid]
 
             results = [r for r in results if r['text']]
             results = self.embedding_model.rerank(query, results)

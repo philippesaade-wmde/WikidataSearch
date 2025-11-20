@@ -6,7 +6,7 @@ class Settings(BaseSettings):
 
     FRONTEND_STATIC_DIR: str = "./frontend/dist"
     CACHE_TTL: int = 180  # 3 minutes
-    RATE_LIMIT: str = "10/minute"
+    RATE_LIMIT: str = "30/minute"
     DEST_LANG: str = "en"
     VECTORDb_LANGS: list[str] = ["en", "fr", "ar"]
 
