@@ -106,6 +106,14 @@ async def item_query_route(
     """
     start_time = time.time()
 
+    require_descriptive_user_agent(request)
+
+    # Temporarily disable pending internal review.
+    if return_vectors:
+        response = "Returning vectors is temporarily disabled, pending internal review."
+        Logger.add_request(request, response, 422, start_time)
+        raise HTTPException(status_code=422, detail=response)
+
     if not query:
         response = "Query is missing"
         Logger.add_request(request, response, 422, start_time)
@@ -122,7 +130,6 @@ async def item_query_route(
         filt["metadata.InstanceOf"] = {"$in": qids}
 
     try:
-        return_vectors = False  # Temporarily disable pending internal review.
         results = SEARCH.search(
             query,
             filter=filt,

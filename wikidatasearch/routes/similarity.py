@@ -89,7 +89,11 @@ async def similarity_score_route(
     """
     start_time = time.time()
 
-    require_descriptive_user_agent(request)
+    # Temporarily disable pending internal review.
+    if return_vectors:
+        response = "Returning vectors is temporarily disabled, pending internal review."
+        Logger.add_request(request, response, 422, start_time)
+        raise HTTPException(status_code=422, detail=response)
 
     if not query:
         detail = "Query is missing"
@@ -108,7 +112,6 @@ async def similarity_score_route(
             Logger.add_request(request, detail, 422, start_time)
             raise HTTPException(status_code=422, detail=detail)
 
-        return_vectors = False  # Temporarily disable pending internal review.
         results = SEARCH.vectorsearch.get_similarity_scores(
             query=query,
             qids=qids,
