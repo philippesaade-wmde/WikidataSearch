@@ -106,8 +106,6 @@ async def property_query_route(
     """
     start_time = time.time()
 
-    require_descriptive_user_agent(request)
-
     # Temporarily disable pending internal review.
     if return_vectors:
         response = "Returning vectors is temporarily disabled, pending internal review."
