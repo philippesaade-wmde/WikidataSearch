@@ -2,12 +2,25 @@ from fastapi import Security, HTTPException, Request, FastAPI, Depends
 from fastapi.security.api_key import APIKeyHeader
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from .config import settings
 
+def user_agent_key(request: Request) -> str:
+    """
+    Rate limit key based on User-Agent.
 
-limiter = Limiter(key_func=get_remote_address)
+    If User-Agent is missing or empty, fall back to a shared 'unknown' bucket.
+    """
+    ua = (request.headers.get("user-agent") or "").strip()
+
+    if not ua:
+        # All "no UA" clients share a single bucket
+        return "ua:unknown"
+
+    return f"ua:{ua}"
+
+# Consider the user agent for rate limiting since WMcloud requests share the same IP.
+limiter = Limiter(key_func=user_agent_key)
 api_key_header = APIKeyHeader(name="X-API-SECRET", auto_error=False)
 
 def verify_api_key(x_api_secret: str = Security(api_key_header)) -> str | None:
