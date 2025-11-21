@@ -1,6 +1,6 @@
 import requests
 import re
-import os
+import traceback
 
 class Translator:
     def __init__(self, dest_lang='en'):
@@ -43,7 +43,6 @@ class Translator:
             translation = re.sub('<[^>]*>', '', translation)
             return translation
         except Exception as e:
-            print(r.text)
-            print(e)
+            traceback.print_exc()
             # Fallback and query with the original text
             return text

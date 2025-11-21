@@ -63,7 +63,6 @@ class Search(ABC):
         results.raise_for_status()
 
         text = results.json()
-        print(text)
         return text
 
 
