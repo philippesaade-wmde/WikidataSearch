@@ -7,6 +7,7 @@ from stopwordsiso import stopwords
 import requests
 import re
 
+from .datastax import AstraDBConnect
 from .jina import JinaAIAPI
 from .translator import Translator
 
@@ -81,21 +82,8 @@ class VectorSearch(Search):
             datastax_token (dict): Credentials for DataStax Astra, including token and API endpoint.
             embedding_model (object): The initialised embedding model.
         """
-        ASTRA_DB_APPLICATION_TOKEN = datastax_tokens['ASTRA_DB_APPLICATION_TOKEN']
-        ASTRA_DB_API_ENDPOINT = datastax_tokens["ASTRA_DB_API_ENDPOINT"]
-        ASTRA_DB_COLLECTION = datastax_tokens["ASTRA_DB_COLLECTION"]
-
-        timeout_options = TimeoutOptions(request_timeout_ms=100000)
-        api_options = APIOptions(timeout_options=timeout_options)
-
-        client = DataAPIClient(
-            ASTRA_DB_APPLICATION_TOKEN,
-            api_options=api_options
-        )
-        database0 = client.get_database(ASTRA_DB_API_ENDPOINT)
-        self.wikiDataCollection = database0.get_collection(ASTRA_DB_COLLECTION)
-
         self.embedding_model = embedding_model
+        self.vectorDB = AstraDBConnect(datastax_tokens, embedding_model)
         self.translator = Translator(dest_lang)
         self.vectordb_langs = vectordb_langs
 
@@ -182,7 +170,7 @@ class VectorSearch(Search):
         if return_vectors:
             projection["$vector"] = 1
 
-        relevant_items = self.wikiDataCollection.find(
+        relevant_items = self.vectorDB.find(
             filter,
             sort={"$vector": embedding},
             projection=projection,
@@ -301,7 +289,7 @@ class VectorSearch(Search):
         if return_text:
             projection["content"] = 1
 
-        results = self.wikiDataCollection.find(
+        results = self.vectorDB.find(
             filter,
             projection=projection,
             limit=1

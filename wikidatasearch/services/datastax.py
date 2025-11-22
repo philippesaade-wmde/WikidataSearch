@@ -27,8 +27,33 @@ class AstraDBConnect:
         )
         database0 = client.get_database(ASTRA_DB_API_ENDPOINT)
         self.wikiDataCollection = database0.get_collection(ASTRA_DB_COLLECTION)
+        self.wikiDataCollectionProperties = database0.get_collection(ASTRA_DB_COLLECTION+"_properties")
 
         self.embedding_model = embedding_model
+
+    def find(self,
+             filter,
+             sort={},
+             projection={"metadata": 1},
+             limit=50,
+             include_similarity=True):
+
+        collection = self.wikiDataCollection
+        if filter.get('metadata.IsProperty', False):
+            del filter['metadata.IsProperty']
+            filter['metadata.DataType'] = {'$ne': 'external-id'}
+            collection = self.wikiDataCollectionProperties
+        elif filter.get('metadata.IsItem', False):
+            del filter['metadata.IsItem']
+            collection = self.wikiDataCollection
+
+        return collection.find(
+            filter,
+            sort=sort,
+            projection=projection,
+            limit=limit,
+            include_similarity=include_similarity
+        )
 
     def add_document(self, id, text, metadata):
         """
