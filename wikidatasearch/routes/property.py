@@ -72,14 +72,9 @@ async def property_query_route(
         example="Q18616576",
         description='Comma separated QIDs to filter by "instance of" class',
     ),
-    instanceof_exclude: Optional[str] = Query(
-        None,
-        example="Q18616576",
-        description='Comma separated QIDs to exclude by "instance of" class',
-    ),
     rerank: bool = Query(False, description="If true, apply a reranker model."),
     return_vectors: bool = Query(False, description="Temporarily unavailable pending internal review."),
-    exclude_external_ids: bool = Query(True, description="If true, exclude properties with external identifier datatype.")
+    exclude_external_ids: bool = Query(False, description="If true, exclude properties with external identifier datatype.")
 ):
     """
     Performs vector and keyword search on Wikidata properties, combining results using Reciprocal Rank Fusion (RRF) or an optional reranker model.
@@ -132,14 +127,6 @@ async def property_query_route(
             Logger.add_request(request, response, 422, start_time)
             raise HTTPException(status_code=422, detail=response)
         filt["metadata.InstanceOf"] = {"$in": qids}
-
-    if instanceof_exclude:
-        qids = [qid.strip() for qid in instanceof_exclude.split(",") if qid.strip()]
-        if not qids:
-            response = "Invalid instanceof_exclude filter"
-            Logger.add_request(request, response, 422, start_time)
-            raise HTTPException(status_code=422, detail=response)
-        filt["metadata.InstanceOf"] = {"$nin": qids}
 
     if exclude_external_ids:
         filt["metadata.DataType"] = {"$ne": "external-id"}

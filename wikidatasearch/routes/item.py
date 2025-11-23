@@ -72,11 +72,6 @@ async def item_query_route(
             example="Q5,Q634",
             description='Comma separated QIDs to filter by "instance of".',
         ),
-        instanceof_exclude: Optional[str] = Query(
-            None,
-            example="Q18616576",
-            description='Comma separated QIDs to exclude by "instance of" class',
-        ),
         rerank: bool = Query(False, description="If true, apply a reranker model."),
         return_vectors: bool = Query(False, description="Temporarily unavailable pending internal review."),
     ):
@@ -93,7 +88,6 @@ async def item_query_route(
     If no vectors exist for that language, the query will be translated to English and searched against all vectors.
     - **K** (int): Number of top results to return.
     - **instanceof** (str, optional): Comma-separated list of QIDs to filter results by a specific "instance of" class.
-    - **instanceof_exclude** (str, optional): Comma-separated list of QIDs to exclude results by a specific "instance of" class.
     - **rerank** (bool): If True, rerank results using a reranker model
     (This option is slower and generally not necessary for RAG applications).
     - **return_vectors** (bool): If True, include vector embeddings in the response.
@@ -132,14 +126,6 @@ async def item_query_route(
             Logger.add_request(request, response, 422, start_time)
             raise HTTPException(status_code=422, detail=response)
         filt["metadata.InstanceOf"] = {"$in": qids}
-
-    if instanceof_exclude:
-        qids = [qid.strip() for qid in instanceof.split(",") if qid.strip()]
-        if not qids:
-            response = "Invalid instanceof filter"
-            Logger.add_request(request, response, 422, start_time)
-            raise HTTPException(status_code=422, detail=response)
-        filt["metadata.InstanceOf"] = {"$nin": qids}
 
     try:
         results = SEARCH.search(
