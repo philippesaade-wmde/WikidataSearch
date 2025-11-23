@@ -134,9 +134,9 @@ async def property_query_route(
         filt["metadata.InstanceOf"] = {"$in": qids}
 
     if instanceof_exclude:
-        qids = [qid.strip() for qid in instanceof.split(",") if qid.strip()]
+        qids = [qid.strip() for qid in instanceof_exclude.split(",") if qid.strip()]
         if not qids:
-            response = "Invalid instanceof filter"
+            response = "Invalid instanceof_exclude filter"
             Logger.add_request(request, response, 422, start_time)
             raise HTTPException(status_code=422, detail=response)
         filt["metadata.InstanceOf"] = {"$nin": qids}
