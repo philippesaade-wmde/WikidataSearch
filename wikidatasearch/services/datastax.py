@@ -41,7 +41,6 @@ class AstraDBConnect:
         collection = self.wikiDataCollection
         if filter.get('metadata.IsProperty', False):
             del filter['metadata.IsProperty']
-            filter['metadata.DataType'] = {'$ne': 'external-id'}
             collection = self.wikiDataCollectionProperties
         elif filter.get('metadata.IsItem', False):
             del filter['metadata.IsItem']
