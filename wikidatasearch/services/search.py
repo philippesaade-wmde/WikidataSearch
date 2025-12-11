@@ -220,23 +220,9 @@ class VectorSearch(Search):
         Returns:
             list: A list of dictionaries containing the similarity score.
         """
-        filter = {"$or": [
-            {"metadata.QID": {"$in": [q for q in qids if q.startswith("Q")]}},
-            {"metadata.PID": {"$in": [p for p in qids if p.startswith("P")]}}
-        ]}
-
-        if lang in self.vectordb_langs:
-            filter['metadata.Language'] = lang
-
-        results = self.search(
-            query,
-            filter=filter,
-            K=50,
-            return_vectors=return_vectors,
-            return_text=return_text
-        )
+        results = []
+        qids_found = []
         while len(results) < len(qids):
-            qids_found = [result.get('QID', result.get('PID')) for result in results]
             remaining_qids = [qid for qid in qids if qid not in qids_found]
             if len(remaining_qids) == 0:
                 break
