@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, Integer, Float, DateTime
+from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta
@@ -6,6 +6,8 @@ import traceback
 import json
 import time
 import os
+from hashlib import sha256
+import re
 
 TOOL_DATA_DIR = os.environ.get("TOOL_DATA_DIR", "./data")
 DB_URL = os.path.join(TOOL_DATA_DIR, 'request_logs.db')
@@ -25,14 +27,14 @@ class Logger(Base):
     status = Column(Integer)
     response = Column(String)
     response_time = Column(Float)
+    is_redacted = Column(Boolean)
 
     @staticmethod
     def add_request(request, response, status_code, start_time):
         with Session() as session:
             try:
                 # Clean up old logs (older than 90 days)
-                cutoff_date = datetime.utcnow() - timedelta(days=90)
-                session.query(Logger).filter(Logger.timestamp < cutoff_date).delete()
+                Logger.redact_old_requests(90, 1000)
 
                 # Add new log entry
                 log_entry = Logger(
@@ -51,6 +53,50 @@ class Logger(Base):
                 )
                 session.add(log_entry)
                 session.commit()
+            except Exception as e:
+                session.rollback()
+                traceback.print_exc()
+
+    @staticmethod
+    def redact_old_requests(days: int=90, batch_size: int=1000):
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        with Session() as session:
+            try:
+                old_requests = (
+                    session.query(Logger)
+                    .filter(Logger.timestamp < cutoff_date)
+                    .filter((Logger.is_redacted.is_(None)) | (Logger.is_redacted == False))
+                    .order_by(Logger.id.asc())
+                    .yield_per(batch_size)
+                )
+
+                changed = False
+                for row in old_requests:
+                    raw_params = row.parameters or "{}"
+                    try:
+                        params = json.loads(raw_params)
+                    except:
+                        params = {}
+
+                    params['query_len'] = len(params.get('query', ''))
+
+                    _WORD_RE = re.compile(r"\w+", re.UNICODE)
+                    params['query_words'] = len(_WORD_RE.findall(params.get('query', '')))
+
+                    params['query'] = sha256(params.get('query', '').encode('utf-8')).hexdigest()
+                    row.parameters = json.dumps(
+                        params,
+                        separators=(',', ':')
+                    )
+
+                    row.user_agent = sha256(row.user_agent.encode('utf-8')).hexdigest()
+
+                    row.is_redacted = True
+                    changed = True
+
+                if changed:
+                    session.commit()
+
             except Exception as e:
                 session.rollback()
                 traceback.print_exc()
