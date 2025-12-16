@@ -49,7 +49,8 @@ class Logger(Base):
                         response,
                         separators=(',', ':')
                     ),
-                    response_time=time.time() - start_time
+                    response_time=time.time() - start_time,
+                    is_redacted=False
                 )
                 session.add(log_entry)
                 session.commit()
