@@ -1,11 +1,9 @@
 from abc import ABC, abstractmethod
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
-from astrapy import DataAPIClient
-from astrapy.api_options import APIOptions, TimeoutOptions
+from concurrent.futures import ThreadPoolExecutor
 from stopwordsiso import stopwords
 import requests
 import re
+import os
 
 from .datastax import AstraDBConnect
 from .jina import JinaAIAPI
@@ -59,7 +57,7 @@ class Search(ABC):
             'User-Agent': 'Wikidata Vector Database/Alpha Version (embedding@wikimedia.de)'
         }
 
-        url = "https://wd-textify.toolforge.org"
+        url = os.environ.get("WD_TEXTIFIER_API", "https://wd-textify.wmcloud.org")
         results = requests.get(url, params=params, headers=headers)
         results.raise_for_status()
 

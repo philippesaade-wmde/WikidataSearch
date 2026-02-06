@@ -85,6 +85,9 @@ class Logger(Base):
                     params['query_words'] = len(_WORD_RE.findall(params.get('query', '')))
 
                     params['query'] = sha256(params.get('query', '').encode('utf-8')).hexdigest()
+
+                    params['on_browser'] = 'Mozilla' in row.user_agent
+
                     row.parameters = json.dumps(
                         params,
                         separators=(',', ':')
