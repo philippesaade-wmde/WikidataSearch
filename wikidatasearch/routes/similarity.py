@@ -92,25 +92,25 @@ async def similarity_score_route(
     # Temporarily disable pending internal review.
     if return_vectors:
         response = "Returning vectors is temporarily disabled, pending internal review."
-        Logger.add_request(request, response, 422, start_time)
+        Logger.add_request(request, 422, start_time, error=response)
         raise HTTPException(status_code=422, detail=response)
 
     if not query:
-        detail = "Query is missing"
-        Logger.add_request(request, detail, 422, start_time)
-        raise HTTPException(status_code=422, detail=detail)
+        response = "Query is missing"
+        Logger.add_request(request, 422, start_time, error=response)
+        raise HTTPException(status_code=422, detail=response)
 
     if not qid:
-        detail = "QIDs are missing"
-        Logger.add_request(request, detail, 422, start_time)
-        raise HTTPException(status_code=422, detail=detail)
+        response = "QIDs are missing"
+        Logger.add_request(request, 422, start_time, error=response)
+        raise HTTPException(status_code=422, detail=response)
 
     try:
         qids = [q.strip() for q in qid.split(",") if q.strip()]
         if not qids:
-            detail = "No valid QIDs provided"
-            Logger.add_request(request, detail, 422, start_time)
-            raise HTTPException(status_code=422, detail=detail)
+            response = "No valid QIDs provided"
+            Logger.add_request(request, 422, start_time, error=response)
+            raise HTTPException(status_code=422, detail=response)
 
         results = SEARCH.vectorsearch.get_similarity_scores(
             query=query,
@@ -119,10 +119,10 @@ async def similarity_score_route(
             return_vectors=return_vectors,
         )
 
-        background_tasks.add_task(Logger.add_request, request, "Results", 200, start_time)
+        background_tasks.add_task(Logger.add_request, request, 200, start_time)
         return results
 
     except Exception as e:
-        Logger.add_request(request, str(e), 500, start_time)
+        Logger.add_request(request, 500, start_time, error=str(e))
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")

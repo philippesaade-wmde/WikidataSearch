@@ -1,54 +1,111 @@
-from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, DateTime
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    Index,
+    Integer,
+    String,
+    Text,
+    create_engine,
+)
+from sqlalchemy.dialects.mysql import JSON
+from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime, timedelta
 import traceback
-import json
 import time
 import os
 from hashlib import sha256
 import re
 
-TOOL_DATA_DIR = os.environ.get("TOOL_DATA_DIR", "./data")
-DB_URL = os.path.join(TOOL_DATA_DIR, 'request_logs.db')
-SQLA_URL = f"sqlite:///{DB_URL}"
-Base = declarative_base()
+"""
+MySQL database setup for storing Wikidata labels in all languages.
+"""
 
-engine = create_engine(SQLA_URL, connect_args={"check_same_thread": False})
+DB_HOST = os.environ["DB_HOST"]
+DB_NAME = os.environ["DB_NAME"]
+DB_USER = os.environ["DB_USER"]
+DB_PASS = os.environ["DB_PASS"]
+DB_PORT = int(os.environ.get("DB_PORT", "3306"))
+
+DATABASE_URL = (
+    f"mariadb+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    f"?charset=utf8mb4"
+)
+
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=5,  # Limit the number of open connections
+    max_overflow=10,  # Allow extra connections beyond pool_size
+    pool_recycle=1800,  # Recycle connections every 30 minutes
+    pool_pre_ping=True,
+)
+
+Base = declarative_base()
 Session = sessionmaker(bind=engine, expire_on_commit=False)
 
 class Logger(Base):
     __tablename__ = 'requests'
-    id = Column(Integer, primary_key=True, index=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-    route = Column(String)
-    user_agent = Column(String)
-    parameters = Column(String)
-    status = Column(Integer)
-    response = Column(String)
-    response_time = Column(Float)
-    is_redacted = Column(Boolean)
+    __table_args__ = (
+        Index("ix_requests_route_timestamp", "route", "timestamp"),
+        Index("ix_requests_status_timestamp", "status", "timestamp"),
+        Index("ix_requests_redaction_scan", "is_redacted", "timestamp", "id"),
+        {"mysql_charset": "utf8mb4"},
+    )
+
+    id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True, nullable=False)
+    route = Column(String(128), index=True, nullable=False)
+    parameters = Column(JSON, default=dict, nullable=False)
+    status = Column(Integer, index=True, nullable=False)
+    error = Column(Text)
+    response_time = Column(Float, nullable=False)
+    is_redacted = Column(Boolean, default=False, index=True, nullable=False)
+
+    # User Agent
+    user_agent = Column(String(255))
+    user_agent_hash = Column(String(64), index=True, nullable=False)
+    on_browser = Column(Boolean, nullable=False, default=False)
+
+    # For queries
+    query = Column(Text)
+    query_hash = Column(String(64), index=True, nullable=False)
+    query_length = Column(Integer, nullable=False, default=0)
+    query_words = Column(Integer, nullable=False, default=0)
+
 
     @staticmethod
-    def add_request(request, response, status_code, start_time):
+    def add_request(request, status_code, start_time, error=""):
         with Session() as session:
             try:
                 # Clean up old logs (older than 90 days)
                 Logger.redact_old_requests(90, 1000)
 
+                user_agent = request.headers.get('user-agent', 'unknown')[:255]
+                user_agent_hash = sha256(user_agent.encode('utf-8')).hexdigest()
+                on_browser = 'Mozilla' in user_agent
+
+                query = request.query_params.get('query', '')
+                query_hash = sha256(query.encode('utf-8')).hexdigest()
+                query_length = len(query)
+                query_words = len(re.findall(r'\w+', query))
+
+                parameters = dict(request.query_params)
+                parameters.pop('query', None)
+
                 # Add new log entry
                 log_entry = Logger(
-                    route=request.url.path,
-                    user_agent=request.headers.get('user-agent', 'unknown')[:255],
-                    parameters=json.dumps(
-                        dict(request.query_params),
-                        separators=(',', ':')
-                    ),
+                    route=request.url.path[:128],
+                    user_agent=user_agent,
+                    user_agent_hash=user_agent_hash,
+                    on_browser=on_browser,
+                    parameters=parameters,
+                    query=query,
+                    query_hash=query_hash,
+                    query_length=query_length,
+                    query_words=query_words,
                     status=status_code,
-                    response=json.dumps(
-                        response,
-                        separators=(',', ':')
-                    ),
+                    error=error,
                     response_time=time.time() - start_time,
                     is_redacted=False
                 )
@@ -73,28 +130,8 @@ class Logger(Base):
 
                 changed = False
                 for row in old_requests:
-                    raw_params = row.parameters or "{}"
-                    try:
-                        params = json.loads(raw_params)
-                    except:
-                        params = {}
-
-                    params['query_len'] = len(params.get('query', ''))
-
-                    _WORD_RE = re.compile(r"\w+", re.UNICODE)
-                    params['query_words'] = len(_WORD_RE.findall(params.get('query', '')))
-
-                    params['query'] = sha256(params.get('query', '').encode('utf-8')).hexdigest()
-
-                    params['on_browser'] = 'Mozilla' in row.user_agent
-
-                    row.parameters = json.dumps(
-                        params,
-                        separators=(',', ':')
-                    )
-
-                    row.user_agent = sha256(row.user_agent.encode('utf-8')).hexdigest()
-
+                    row.user_agent = ""
+                    row.query = ""
                     row.is_redacted = True
                     changed = True
 
@@ -107,10 +144,15 @@ class Logger(Base):
 
 class Feedback(Base):
     __tablename__ = 'feedback'
+    __table_args__ = (
+        Index("ix_feedback_qid", "qid"),
+        {"mysql_charset": "utf8mb4"},
+    )
+
     id = Column(Integer, primary_key=True, autoincrement=True)
-    query = Column(String)
-    qid = Column(String)
-    sentiment = Column(String)
+    query = Column(String(512))
+    qid = Column(String(32))
+    sentiment = Column(String(32))
     index = Column(Integer)
 
     @staticmethod

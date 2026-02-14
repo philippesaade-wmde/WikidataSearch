@@ -111,12 +111,12 @@ async def property_query_route(
     # Temporarily disable pending internal review.
     if return_vectors:
         response = "Returning vectors is temporarily disabled, pending internal review."
-        Logger.add_request(request, response, 422, start_time)
+        Logger.add_request(request, 422, start_time, error=response)
         raise HTTPException(status_code=422, detail=response)
 
     if not query:
         response = "Query is missing"
-        Logger.add_request(request, response, 422, start_time)
+        Logger.add_request(request, 422, start_time, error=response)
         raise HTTPException(status_code=422, detail=response)
 
     filt = {"metadata.IsProperty": True}
@@ -124,7 +124,7 @@ async def property_query_route(
         qids = [qid.strip() for qid in instanceof.split(",") if qid.strip()]
         if not qids:
             response = "Invalid instanceof filter"
-            Logger.add_request(request, response, 422, start_time)
+            Logger.add_request(request, 422, start_time, error=response)
             raise HTTPException(status_code=422, detail=response)
         filt["metadata.InstanceOf"] = {"$in": qids}
 
@@ -143,10 +143,10 @@ async def property_query_route(
         )
 
         results = results[:K]
-        background_tasks.add_task(Logger.add_request, request, "Results", 200, start_time)
+        background_tasks.add_task(Logger.add_request, request, 200, start_time)
         return results
 
     except Exception as e:
-        Logger.add_request(request, str(e), 500, start_time)
+        Logger.add_request(request, 500, start_time, error=str(e))
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")

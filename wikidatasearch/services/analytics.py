@@ -38,15 +38,9 @@ class QueryFilters:
 # Time helpers
 # ----------------------------
 
-def utc_now() -> datetime:
-    return datetime.now(tz=timezone.utc).replace(microsecond=0)
-
-def to_naive_utc(dt: datetime) -> datetime:
-    return dt.astimezone(timezone.utc).replace(tzinfo=None)
-
 def normalize_dt(val: Any) -> datetime:
     if isinstance(val, datetime):
-        return to_naive_utc(val)
+        return val.astimezone(timezone.utc).replace(tzinfo=None)
     if isinstance(val, (int, float)):
         s = float(val)
         # allow ns, us, ms heuristics
@@ -63,6 +57,18 @@ def normalize_dt(val: Any) -> datetime:
     return dt.tz_convert(None).to_pydatetime()
 
 
+def _coerce_parameters(value: Any) -> dict:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str) and value:
+        try:
+            parsed = json.loads(value)
+            return parsed if isinstance(parsed, dict) else {}
+        except Exception:
+            return {}
+    return {}
+
+
 # ----------------------------
 # Data access
 # ----------------------------
@@ -75,7 +81,7 @@ def _build_sql_and_params(
     ua_include: Optional[str],
 ) -> Tuple[Any, dict]:
     base = """
-        SELECT timestamp, route, user_agent, status, parameters
+        SELECT timestamp, route, user_agent, on_browser, status, parameters
         FROM requests
         WHERE timestamp BETWEEN :start AND :end
     """
@@ -139,10 +145,7 @@ def _extract_params_col(s: pd.Series) -> pd.DataFrame:
     Returns a DataFrame with columns ['rerank','lang'] normalized.
     """
     def parse_one(x: Any) -> dict:
-        try:
-            d = json.loads(x) if isinstance(x, str) and x else {}
-        except Exception:
-            d = {}
+        d = _coerce_parameters(x)
         rerank = str(d.get("rerank")).strip().lower() if "rerank" in d else ""
         if rerank == "" or rerank not in ("true", "false"):
             rerank = "unset"
@@ -176,8 +179,11 @@ def aggregate_requests(df: pd.DataFrame, period: Period, group_by: GroupBy) -> p
 
     # Derived grouping: browser vs API based on UA
     if group_by == "client":
-        ua = df.get("user_agent", pd.Series(index=df.index, dtype=object)).fillna("")
-        is_browser = ua.str.contains("mozilla", case=False, na=False)
+        if "on_browser" in df.columns:
+            is_browser = df["on_browser"].fillna(False).astype(bool)
+        else:
+            ua = df.get("user_agent", pd.Series(index=df.index, dtype=object)).fillna("")
+            is_browser = ua.str.contains("mozilla", case=False, na=False)
         df["client"] = is_browser.map({True: "browser", False: "api"})
 
     df = df.set_index("timestamp")
@@ -264,7 +270,7 @@ def lang_choices(sample: int = 2000) -> List[str]:
     q = text("""
         SELECT parameters
         FROM requests
-        WHERE parameters IS NOT NULL AND parameters != ''
+        WHERE parameters IS NOT NULL
         ORDER BY timestamp DESC
         LIMIT :sample
     """)
@@ -272,13 +278,10 @@ def lang_choices(sample: int = 2000) -> List[str]:
         df = pd.read_sql(q, conn, params={"sample": sample})
     vals: set[str] = set()
     for s in df.get("parameters", []):
-        try:
-            d = json.loads(s)
-            v = d.get("lang")
-            if v is not None and str(v).strip() != "":
-                vals.add(str(v))
-        except Exception:
-            continue
+        d = _coerce_parameters(s)
+        v = d.get("lang")
+        if v is not None and str(v).strip() != "":
+            vals.add(str(v))
     return sorted(vals)
 
 # ----------------------------
@@ -312,7 +315,7 @@ def run_query(filters: QueryFilters):
 # ----------------------------
 
 def build_analytics_app():
-    now = utc_now()
+    now = datetime.now(tz=timezone.utc).replace(microsecond=0)
     default_start = now - pd.Timedelta(days=7)
 
     with gr.Blocks(title="API Analytics") as demo:

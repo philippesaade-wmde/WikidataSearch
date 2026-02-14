@@ -13,6 +13,7 @@ dependencies = [
     "langchain-astradb==0.6.0",
     "pandas>=2.3.3",
     "plotly>=6.3.1",
+    "pymysql>=1.1.2",
     "setuptools>=80.9.0",
     "slowapi>=0.1.9",
     "sqlalchemy>=2.0.43",

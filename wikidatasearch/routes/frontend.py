@@ -13,7 +13,7 @@ router = APIRouter(include_in_schema=False)
 @limiter.limit(settings.RATE_LIMIT)
 @router.get("/")
 async def root(request: Request, background_tasks: BackgroundTasks):
-    background_tasks.add_task(Logger.add_request, request, "", 200, time.time())
+    background_tasks.add_task(Logger.add_request, request, 200, time.time())
     return FileResponse(f"{settings.FRONTEND_STATIC_DIR}/index.html")
 
 def mount_static(app):
