@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     CACHE_TTL: int = 180  # 3 minutes
     RATE_LIMIT: str = "30/minute"
     DEST_LANG: str = "en"
-    VECTORDb_LANGS: list[str] = ["en", "fr", "ar"]
+    VECTORDb_LANGS: list[str] = ["en", "fr", "ar", "de"]
 
     # --- From .env ---
     ASTRA_DB_APPLICATION_TOKEN: str | None = None
