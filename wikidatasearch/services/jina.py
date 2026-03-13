@@ -138,3 +138,16 @@ class JinaAIAPI:
 
         docs.sort(key=lambda x: x['reranker_score'], reverse=True)
         return docs
+
+    def similarity(self, vec1: List[float], vec2: List[float]) -> float:
+        """
+        Computes a clamped dot product between two vectors.
+
+        Args:
+            vec1 (List[float]): The first vector.
+            vec2 (List[float]): The second vector.
+
+        Returns:
+            float: max(0.0, dot(vec1, vec2)).
+        """
+        return max(0.0, np.dot(vec1, vec2))
