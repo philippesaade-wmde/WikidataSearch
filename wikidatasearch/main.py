@@ -13,7 +13,7 @@ from .routes import item, property, similarity, frontend, health
 app = FastAPI(
     title="Wikidata Vector Search",
     description="API for querying the Wikidata Vector Database",
-    version="2.1.0",
+    version="3.0.0",
     openapi_url="/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
