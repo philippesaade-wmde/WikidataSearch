@@ -125,7 +125,6 @@ class VectorSearch(Search):
 
         relevant_items = VectorSearch.remove_duplicates(
             relevant_items,
-            K=K,
             return_vectors=return_vectors,
             return_text=return_text
         )
@@ -241,7 +240,6 @@ class VectorSearch(Search):
 
         relevant_items = VectorSearch.remove_duplicates(
             relevant_items,
-            K=len(relevant_items),
             return_vectors=return_vectors,
             return_text=return_text
         )
@@ -309,7 +307,6 @@ class VectorSearch(Search):
     @staticmethod
     def remove_duplicates(
             results,
-            K=50,
             return_vectors=False,
             return_text=False
         ):
@@ -341,8 +338,5 @@ class VectorSearch(Search):
                 output.append(item_output)
 
                 seen_qids.add(ID)
-
-            if len(seen_qids) >= K:
-                break
 
         return output

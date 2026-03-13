@@ -141,13 +141,13 @@ class JinaAIAPI:
 
     def similarity(self, vec1: List[float], vec2: List[float]) -> float:
         """
-        Computes the dot product between two vectors.
+        Computes a clamped dot product between two vectors.
 
         Args:
             vec1 (List[float]): The first vector.
             vec2 (List[float]): The second vector.
 
         Returns:
-            float: The dot product between the two vectors.
+            float: max(0.0, dot(vec1, vec2)).
         """
-        return np.dot(vec1, vec2)
+        return max(0.0, np.dot(vec1, vec2))
