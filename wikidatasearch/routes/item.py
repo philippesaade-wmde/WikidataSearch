@@ -6,15 +6,15 @@ import time
 import traceback
 
 from ..config import settings, SEARCH
-from ..dependencies import verify_api_key, limiter, require_descriptive_user_agent
+from ..dependencies import limiter, require_descriptive_user_agent
 from ..services.logger import Logger
 
 
 class ItemQuery(BaseModel):
-    QID: str = Field(..., example="Q42", description="Wikidata item QID")
-    similarity_score: float = Field(..., example=0.95, description="Dot product similarity")
-    rrf_score: Optional[float] = Field(0.0, example=8.43, description="Reciprocal Rank Fusion score")
-    source: Optional[str] = Field('', example="Keyword Search, Vector Search")
+    QID: str = Field(..., description="Wikidata item QID")
+    similarity_score: float = Field(..., description="Dot product similarity")
+    rrf_score: Optional[float] = Field(0.0, description="Reciprocal Rank Fusion score")
+    source: Optional[str] = Field('', description="Source of the search")
     vector: Optional[list[float]] = Field(None, description="Present when return_vectors is True")
     reranker_score: Optional[float] = Field(None, description="Present when rerank is True")
 
@@ -23,7 +23,6 @@ router = APIRouter(
     prefix="/item",
     tags=["Queries"],
     dependencies=[
-        Depends(verify_api_key),
         Depends(require_descriptive_user_agent)
     ],
     responses={
@@ -42,7 +41,6 @@ router = APIRouter(
                 }
             },
         },
-        401: {"description": "Missing or invalid API key (if required)"},
         422: {"description": "Missing or invalid parameters"},
         500: {"description": "Internal Server Error"},
     },
@@ -61,15 +59,20 @@ router = APIRouter(
 async def item_query_route(
         request: Request,
         background_tasks: BackgroundTasks,
-        query: str = Query(..., example="Douglas Adams", description="Query string to search for"),
+        query: str = Query(..., examples=["Douglas Adams", "Q42", "Who wrote 1984?"], description="Query string to search for"),
         lang: str = Query(
             "all",
             description='Language code for the query. Use "all" to search across all vectors.',
         ),
-        K: int = Query(50, description="Number of top results to return"),
+        K: int = Query(
+            settings.MAX_VECTORDB_K,
+            ge=1,
+            le=settings.MAX_VECTORDB_K,
+            description="Number of top results to return",
+        ),
         instanceof: Optional[str] = Query(
             None,
-            example="Q5,Q634",
+            examples=["Q2", "Q5,Q634"],
             description='Comma separated QIDs to filter by "instance of".',
         ),
         rerank: bool = Query(False, description="If true, apply a reranker model."),
@@ -90,7 +93,8 @@ async def item_query_route(
     - **instanceof** (str, optional): Comma-separated list of QIDs to filter results by a specific "instance of" class.
     - **rerank** (bool): If True, rerank results using a reranker model
     (This option is slower and generally not necessary for RAG applications).
-    - **return_vectors** (bool): If True, include vector embeddings in the response.
+    - **return_vectors** (bool): Currently unavailable; if set to True this endpoint
+    returns HTTP 422.
 
 
     **Returns:**
@@ -101,13 +105,19 @@ async def item_query_route(
     - **similarity_score** (float): Similarity score (dot product) between the item and the query.
     - **rrf_score** (float): Reciprocal Rank Fusion score combining vector and keyword results.
     - **source** (str): Indicates whether the item was found by "Keyword Search", "Vector Search", or both.
-    - **vector** (list[float], optional): Vector embedding of the item, if "return_vectors" is True.
+    - **vector** (list[float], optional): Vector embedding of the item.
+    Currently omitted because `return_vectors` is disabled.
     - **reranker_score** (float, optional): Relevance score from the reranker model, if "rerank" is True.
     """
     start_time = time.time()
 
     if not query:
         response = "Query is missing"
+        Logger.add_request(request, 422, start_time, error=response)
+        raise HTTPException(status_code=422, detail=response)
+
+    if K > settings.MAX_VECTORDB_K:
+        response = f"K must be less than {settings.MAX_VECTORDB_K}"
         Logger.add_request(request, 422, start_time, error=response)
         raise HTTPException(status_code=422, detail=response)
 

@@ -1,11 +1,9 @@
 import time
 
-from fastapi import Security, HTTPException, Request, FastAPI, Depends
-from fastapi.security.api_key import APIKeyHeader
+from fastapi import HTTPException, Request, FastAPI
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from .config import settings
 from .services.logger import Logger
 
 def user_agent_key(request: Request) -> str:
@@ -24,16 +22,6 @@ def user_agent_key(request: Request) -> str:
 
 # Consider the user agent for rate limiting since WMcloud requests share the same IP.
 limiter = Limiter(key_func=user_agent_key)
-api_key_header = APIKeyHeader(name="X-API-SECRET", auto_error=False)
-
-def verify_api_key(x_api_secret: str = Security(api_key_header)) -> str | None:
-    """
-    Verify X-API-SECRET against settings.API_SECRET.
-    If API_SECRET is unset, auth is effectively disabled.
-    """
-    if settings.API_SECRET and x_api_secret != settings.API_SECRET:
-        raise HTTPException(status_code=401, detail="X-API-SECRET incorrect or missing")
-    return x_api_secret
 
 def require_descriptive_user_agent(request: Request) -> None:
     """

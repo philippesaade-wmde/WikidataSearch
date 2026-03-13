@@ -1,26 +1,31 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from fastapi import APIRouter, Depends, Query, Request, BackgroundTasks, HTTPException
 from fastapi_cache.decorator import cache
 import time
 import traceback
 
 from ..config import settings, SEARCH
-from ..dependencies import verify_api_key, limiter, require_descriptive_user_agent
+from ..dependencies import limiter, require_descriptive_user_agent
 from ..services.logger import Logger
 
 
 class SimilarityScore(BaseModel):
-    QID: str = Field(..., example="Q2", description="Wikidata entity QID")
-    similarity_score: float = Field(..., example=0.78, description="Dot product similarity")
+    QID: Optional[str] = Field(None, description="Wikidata entity QID")
+    PID: Optional[str] = Field(None, description="Wikidata property PID")
+    similarity_score: float = Field(..., description="Dot product similarity")
     vector: Optional[list[float]] = Field(None, description="Present when return_vectors is True")
 
+    @model_validator(mode="after")
+    def check_id(self):
+        if not self.QID and not self.PID:
+            raise ValueError("Either QID or PID must be present")
+        return self
 
 router = APIRouter(
     prefix="",
     tags=["Queries"],
     dependencies=[
-        Depends(verify_api_key),
         Depends(require_descriptive_user_agent)
     ],
     responses={
@@ -35,7 +40,6 @@ router = APIRouter(
                 }
             },
         },
-        401: {"description": "Missing or invalid API key"},
         422: {"description": "Missing or invalid parameters"},
         500: {"description": "Internal Server Error"},
     },
@@ -44,7 +48,7 @@ router = APIRouter(
 
 @router.get(
     "/similarity-score/",
-    summary="Compute similarity scores for specific Wikidata QIDs",
+    summary="Compute similarity scores for specific Wikidata IDs",
     operation_id="similarityScoreQuery",
     response_model=List[SimilarityScore],
     response_model_exclude_none=True,
@@ -54,10 +58,10 @@ router = APIRouter(
 async def similarity_score_route(
     request: Request,
     background_tasks: BackgroundTasks,
-    query: str = Query(..., example="origin of the universe", description="Query string to compare against Wikidata entities."),
-    qid: str = Query(..., example="Q42,Q2,Q36153", description="Comma separated list of Wikidata QIDs to compare the query to."),
+    query: str = Query(..., examples=["origin of the universe"], description="Query string to compare against Wikidata entities."),
+    qid: str = Query(..., examples=["Q42,Q2,Q36153", "Q2"], description="Comma separated list of Wikidata IDs (QIDs and/or PIDs) to compare the query to."),
     lang: str = Query(
-        "en",
+        "all",
         description='Language code for the query. Use "all" to compare against all vectors. '
                     'If a specific language is provided, only vectors in that language are used. '
                     'If no vectors exist for that language, the query will be translated to English and compared against all vectors.',
@@ -71,21 +75,24 @@ async def similarity_score_route(
     **Args:**
 
     - **query** (str): Query string to compare against Wikidata entities.
-    - **qid** (str): Comma-separated list of Wikidata QIDs to compare the query to.
+    - **qid** (str): Comma-separated list of Wikidata IDs (QIDs and/or PIDs)
+    to compare the query to.
     - **lang** (str): Language code for the query.
     Use "all" to compare with all vectors in the database.
     If a specific language is provided, only vectors in that language will be used.
     If no vectors exist for that language, the query will be translated to English and compared against all vectors.
-    - **return_vectors** (bool): If True, include vector embeddings in the response.
+    - **return_vectors** (bool): Currently unavailable; if set to True this endpoint
+    returns HTTP 422.
 
 
     **Returns:**
 
     Each item in the result list includes:
 
-    - **QID** (str): Wikidata QID of the compared entity.
+    - **QID**/**PID** (str): Wikidata entity ID of the compared entity.
     - **similarity_score** (float): Similarity score (dot product) between the entity and the query.
-    - **vector** (list[float], optional): Vector embedding of the entity, if "return_vectors" is True.
+    - **vector** (list[float], optional): Vector embedding of the entity.
+    Currently omitted because `return_vectors` is disabled.
     """
     start_time = time.time()
 
@@ -99,14 +106,19 @@ async def similarity_score_route(
         Logger.add_request(request, 422, start_time, error=response)
         raise HTTPException(status_code=422, detail=response)
 
-    try:
-        qids = [q.strip() for q in qid.split(",") if q.strip()]
-        if not qids:
-            response = "No valid QIDs provided"
-            Logger.add_request(request, 422, start_time, error=response)
-            raise HTTPException(status_code=422, detail=response)
+    qids = [q.strip() for q in qid.split(",") if q.strip()]
+    if not qids:
+        response = "No valid QIDs provided"
+        Logger.add_request(request, 422, start_time, error=response)
+        raise HTTPException(status_code=422, detail=response)
 
-        results = SEARCH.vectorsearch.get_similarity_scores(
+    if len(qids) > 100:
+        response = "Too many QIDs provided. Please provide 100 or fewer QIDs."
+        Logger.add_request(request, 422, start_time, error=response)
+        raise HTTPException(status_code=422, detail=response)
+
+    try:
+        results = SEARCH.get_similarity_scores(
             query=query,
             qids=qids,
             lang=lang,

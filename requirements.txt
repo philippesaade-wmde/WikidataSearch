@@ -212,6 +212,8 @@ pygments==2.19.2
     # via rich
 pymongo==4.14.1
     # via astrapy
+pymysql==1.1.2
+    # via wikidatasearch
 python-dateutil==2.9.0.post0
     # via
     #   pandas
@@ -236,6 +238,7 @@ requests==2.32.5
     #   langchain-community
     #   langsmith
     #   requests-toolbelt
+    #   wikidatasearch
 requests-toolbelt==1.0.0
     # via langsmith
 rich==14.2.0

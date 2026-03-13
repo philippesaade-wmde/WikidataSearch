@@ -34,7 +34,7 @@ class Translator:
             'html': f'<p>{text}</p>'
         }
         headers = {
-            'User-Agent': 'Wikidata Vector Database/Alpha Version (embedding@wikimedia.de)'
+            'User-Agent': 'Wikidata Vector Database (embedding@wikimedia.de)'
         }
 
         try:
