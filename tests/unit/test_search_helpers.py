@@ -74,7 +74,7 @@ def test_reciprocal_rank_fusion_merges_sources_and_accumulates_rrf(test_ctx):
     assert by_id["Q5"]["rrf_score"] > 0
 
 
-def test_vector_remove_duplicates_prefers_best_similarity_and_limits_k(test_ctx):
+def test_vector_remove_duplicates_prefers_best_similarity_and_keeps_unique_results(test_ctx):
     _, _, VectorSearch = _service_classes()
     raw_results = [
         {"metadata": {"QID": "Q42"}, "$similarity": 0.60, "$vector": [0.1], "content": "A"},
@@ -84,16 +84,35 @@ def test_vector_remove_duplicates_prefers_best_similarity_and_limits_k(test_ctx)
 
     deduped = VectorSearch.remove_duplicates(
         raw_results,
-        K=1,
         return_vectors=True,
         return_text=True,
     )
 
-    assert len(deduped) == 1
+    assert len(deduped) == 2
     assert deduped[0]["QID"] == "Q42"
     assert deduped[0]["similarity_score"] == 0.95
     assert deduped[0]["vector"] == [0.9]
     assert deduped[0]["text"] == "B"
+    assert deduped[1]["PID"] == "P31"
+    assert deduped[1]["similarity_score"] == 0.70
+
+
+def test_reciprocal_rank_fusion_drops_non_positive_similarity(test_ctx):
+    HybridSearch, _, _ = _service_classes()
+    fused = HybridSearch.reciprocal_rank_fusion(
+        [
+            (
+                "Vector Search",
+                [
+                    {"QID": "Q3", "similarity_score": 0.25},
+                    {"QID": "Q1", "similarity_score": 0.0},
+                    {"QID": "Q2", "similarity_score": -0.1},
+                ],
+            )
+        ]
+    )
+
+    assert [row["QID"] for row in fused] == ["Q3"]
 
 
 def test_keyword_clean_query_removes_stopwords_and_caps_length(test_ctx):

@@ -280,22 +280,23 @@ class HybridSearch(Search):
                 similarity_score = item.get('similarity_score', 0.0)
                 rrf_score = 1.0 / (k + rank + 1)
 
-                if ID not in scores:
-                    scores[ID] = {
-                        **item,
-                        'rrf_score': rrf_score,
-                        'source': source_name,
+                if similarity_score > 0.0:
+                    if ID not in scores:
+                        scores[ID] = {
+                            **item,
+                            'rrf_score': rrf_score,
+                            'source': source_name,
                     }
 
-                else:
-                    scores[ID]['similarity_score'] = max(
-                        similarity_score,
-                        scores[ID].get('similarity_score', 0.0)
-                    )
-                    scores[ID]['rrf_score'] += rrf_score
+                    else:
+                        scores[ID]['similarity_score'] = max(
+                            similarity_score,
+                            scores[ID].get('similarity_score', 0.0)
+                        )
+                        scores[ID]['rrf_score'] += rrf_score
 
-                    if source_name not in scores[ID]['source']:
-                        scores[ID]['source'] += f", {source_name}"
+                        if source_name not in scores[ID]['source']:
+                            scores[ID]['source'] += f", {source_name}"
 
         fused_results = sorted(
             scores.values(),
