@@ -22,8 +22,8 @@ def mount_static(app):
 @router.get("/languages", summary="Supported languages")
 @cache(expire=settings.CACHE_TTL)
 async def languages():
-    vectordb_langs = set(SEARCH.vectorsearch.vectordb_langs)
-    other_langs = set(SEARCH.vectorsearch.translator.mint_langs) - vectordb_langs
+    vectordb_langs = set(SEARCH.vectordb_langs)
+    other_langs = set(SEARCH.translator.mint_langs) - vectordb_langs
     return {
         "vectordb_langs": sorted(vectordb_langs),
         "other_langs": sorted(other_langs),
@@ -33,10 +33,10 @@ async def languages():
 @router.post("/feedback", include_in_schema=False)
 async def feedback(
     request: Request,
-    query: str = Query(..., example="testing"),
-    id: str = Query(..., example="Q5"),
-    sentiment: str = Query(..., example="up"),
-    index: int = Query(..., example=0)):
+    query: str = Query(..., examples=["testing"]),
+    id: str = Query(..., examples=["Q5"]),
+    sentiment: str = Query(..., examples=["up"]),
+    index: int = Query(..., examples=[0])):
 
     Feedback.add_feedback(query, id, sentiment, index)
     return True

@@ -104,6 +104,7 @@
 
             <!-- Language Selector -->
             <div class="flex flex-col md:flex-row items-start md:items-center gap-4 text-sm text-light-text dark:text-dark-text">
+              <span class="font-medium">Language:</span>
 
               <!-- Radios for vectordb_langs -->
               <div class="flex gap-4 items-center flex-wrap">
@@ -153,7 +154,8 @@
             </div>
 
             <!-- Items / Properties toggle -->
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 relative group">
+              <span class="font-medium">Search type:</span>
               <div class="inline-flex h-8 rounded-lg overflow-hidden border border-light-distinct-text dark:border-dark-distinct-text">
                 <button
                   class="px-3 h-full flex items-center text-base font-medium"
@@ -176,8 +178,49 @@
                   Properties
                 </button>
               </div>
+
+              <div>
+                <Icon
+                  icon="fluent:info-16-regular"
+                  class="text-blue-600 dark:text-blue-400 cursor-pointer ml-1"
+                />
+                <div
+                  class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-80 p-3 bg-light-menu dark:bg-dark-menu text-sm text-light-text dark:text-dark-text rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"
+                >
+                  <p class="font-semibold mb-2">Search Type Info</p>
+                  <p><strong>Items</strong> searches Wikidata entities (QIDs), while <strong>Properties</strong> searches Wikidata properties (PIDs).</p>
+                </div>
+              </div>
             </div>
 
+          </div>
+
+          <!-- Rerank toggle -->
+          <div class="flex items-center gap-2 relative group text-sm text-light-text dark:text-dark-text">
+            <span class="font-medium">Rerank:</span>
+            <button
+              class="inline-flex h-8 items-center rounded-lg border px-3 font-medium transition-colors"
+              :class="useRerank
+                ? 'border-blue-600 bg-blue-600 text-white'
+                : 'border-light-distinct-text dark:border-dark-distinct-text bg-transparent text-light-distinct-text dark:text-dark-distinct-text hover:bg-light-menu dark:hover:bg-dark-menu'"
+              @click="useRerank = !useRerank"
+              type="button"
+            >
+              {{ useRerank ? 'ON' : 'OFF' }}
+            </button>
+
+            <div>
+              <Icon
+                icon="fluent:info-16-regular"
+                class="text-blue-600 dark:text-blue-400 cursor-pointer ml-1"
+              />
+              <div
+                class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-80 p-3 bg-light-menu dark:bg-dark-menu text-sm text-light-text dark:text-dark-text rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"
+              >
+                <p class="font-semibold mb-2">Rerank Info</p>
+                <p>Rerank applies an extra relevance model to reorder top results, which can improve quality but increases response time.</p>
+              </div>
+            </div>
           </div>
 
           <!-- Prototype Warning -->
@@ -227,11 +270,12 @@ const displayResponse = ref(false)
 const inputFocused = ref(false)
 const showSettings = ref(true)
 const searchType = ref<'item' | 'property'>('item')
+const useRerank = ref(false)
 
 // Languages
 const vectordbLangs = ref<string[]>([])
 const otherLanguages = ref<string[]>([])
-const selectedLanguage = ref<string>('All')
+const selectedLanguage = ref<string>('all')
 
 function apiSecret() {
   const secret = sessionStorage.getItem('api-secret')
@@ -246,7 +290,7 @@ onMounted(async () => {
     vectordbLangs.value = ['all', ...data.vectordb_langs]
     otherLanguages.value = data.other_langs
     if (!vectordbLangs.value.includes(selectedLanguage.value.toLowerCase())) {
-      selectedLanguage.value = 'ALL'
+      selectedLanguage.value = 'all'
     }
   } catch (e) {
     console.error('Failed to fetch languages', e)
@@ -263,8 +307,13 @@ async function search() {
 
   try {
     const base = searchType.value === 'property' ? '/property/query' : '/item/query'
+    const params = new URLSearchParams({
+      query: inputText.value,
+      lang,
+      rerank: String(useRerank.value),
+    })
     const fetchResult = await fetch(
-      `${base}/?query=${encodeURIComponent(inputText.value)}&rerank=True&lang=${lang}`,
+      `${base}/?${params.toString()}`,
       {
         headers: secret ? { 'x-api-secret': secret } : {}
       }
