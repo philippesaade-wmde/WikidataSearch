@@ -1,6 +1,6 @@
 # **Architecture Decision Record**: Language and Entity-Type Sharding for the Wikidata Vector Database
 
-**Status**: Implemented \
+**Status**: Implemented  
 **Date**: 12 Mar 2026
 
 ## Context
@@ -9,23 +9,23 @@ The Wikidata Vector Database initially stored all computed language embeddings f
 
 The Wikidata Vector Database API exposes the following endpoints to query the vector database:
 
-* */item/query/*
-* */property/query/*
+* */item/query/*  
+* */property/query/*  
 * */similarity-score/*
 
 The first two */query/* endpoints perform hybrid search using vector search and keyword search, then combine results with Reciprocal Rank Fusion (RRF), optionally followed by reranking with a provided reranker model.
 
 The initial architecture used a single vector database containing all computed vectors of Wikidata entities, where:
 
-* Each entity stored one embedding per language
-* All languages were stored in the same vector database
+* Each entity stored one embedding per language  
+* All languages were stored in the same vector database  
 * Items and properties were stored together
 
 As support for additional languages expanded, this architecture introduced several concerns:
 
-* **Database growth:** Each additional language increased the number of vectors stored per entity, resulting in linear growth in database size.
-* **Search performance degradation:** Larger vector indexes increase query latency. This has been evident when comparing query efficiency between the current database and previous experiments on a subset.
-* **Decreased retrieval precision:** Larger vector indexes reduce the effectiveness of approximate nearest neighbour (ANN) search. As the index grows, the probability of missing highly relevant vectors increases related to the limits of ANN approximation.
+* **Database growth:** Each additional language increased the number of vectors stored per entity, resulting in linear growth in database size.  
+* **Search performance degradation:** Larger vector indexes increase query latency. This has been evident when comparing query efficiency between the current database and previous experiments on a subset.  
+* **Decreased retrieval precision:** Larger vector indexes reduce the effectiveness of approximate nearest neighbour (ANN) search. As the index grows, the probability of missing highly relevant vectors increases related to the limits of ANN approximation.  
 * **Limited control over language exposure:** Results across languages depended solely on embedding similarity scores, making it difficult to ensure balanced exposure of entities across languages.
 
 These limitations made the single multilingual vector database increasingly slow and difficult to scale as language coverage increased.
@@ -36,7 +36,7 @@ The vector database architecture will be migrated to a sharded design based on l
 
 Entity types include:
 
-* Wikidata **items** (\~21 million entities)
+* Wikidata **items** (\~21 million entities)  
 * Wikidata **properties** (\~12 thousand entities)
 
 Items and properties are stored in separate vector databases because they are queried through different API endpoints and are never retrieved together. Because the number of items is several orders of magnitude larger than the number of properties, properties could be underrepresented in search results if both entity types shared the same vector index.
@@ -45,9 +45,9 @@ Additionally, combining items and properties in a single index would require add
 
 Languages currently supported:
 
-* **English** (\~21 million items)
-* **French** (\~10.6 million items)
-* **Arabic** (\~3 million items)
+* **English** (\~21 million items)  
+* **French** (\~10.6 million items)  
+* **Arabic** (\~3 million items)  
 * **German** (\~9.7 million items)
 
 The new deployment will contain 8 vector databases:
@@ -73,19 +73,19 @@ The API server is responsible for orchestrating queries across the vector databa
 
 When a query is received:
 
-1. The query embedding is computed
-2. The API determines which language shards must be queried based on the \`lang\` parameter.
-3. Vector searches are executed in parallel across the relevant shards
-4. Results from each shard are collected
+1. The query is shared with an API server that computes and returns the embedding vectors.  
+2. The API determines which language shards the request calls based on the \`lang\` parameter.  
+3. Vector searches are executed in parallel across the relevant shards via a second API, which calls the vector database similarity search protocol for each shard.  
+4. Results from each shard are collected.
 
 ### Language Selection
 
-The language (‘lang’) parameter determines which language shards are queried:
-**Specific language:** Only the corresponding language shard is queried.
-**All language:** All language shards for the entity type are queried in parallel.
-**Unsupported language:** The query is translated to English and the system falls back to querying all shards.
+The language (‘lang’) parameter determines which language shards are queried:  
+**Specific language:** Only the corresponding language shard is queried.  
+**All language:** All language shards for the entity type are queried in parallel.  
+**Unsupported language:** The query is translated to English, and the system falls back to querying all shards.
 
-**Future consideration**: define a default subset of languages to query instead of querying all shards. This may become necessary if the number of supported languages increases significantly.
+**Future consideration**: define a default subset of languages to query, rather than querying all shards. This may become necessary if the number of supported languages increases significantly.
 
 ### Query Endpoints
 
@@ -93,23 +93,24 @@ Search endpoints (/item/query/ and /property/query/) combine **vector search** a
 
 Queries are executed against vector databases corresponding to the requested entity type (items or properties). Within that entity type, vector search is executed independently on each relevant language shard.
 
-* */item/query/* searches item vector databases
+* */item/query/* searches item vector databases  
 * */property/query/* searches property vector databases
 
 RRF provides a ranking method that is independent of the raw similarity scores produced by individual retrieval methods or language shards. Entities are ranked by their RRF score, which increases when an entity appears in multiple result lists, such as:
 
-* Results returned from multiple language shards
+* Results returned from multiple language shards  
 * Both vector search and keyword search results
 
-Entities that appear frequently and at higher ranks across these result lists receive higher final rankings.
+Entities that appear frequently and at higher ranks across these resulting lists receive higher final rankings.
 
 ### Similarity Score Endpoint
 
 The */similarity-score/* endpoint behaves differently from the search endpoints. Instead of retrieving entities, the user provides a list of entities and requests their similarity scores relative to a given query.
+
 For the requested entity type, the API performs the following steps:
 
-1. Queries relevant language shards in parallel
-2. Computes similarity scores between the query embedding and the vectors for the provided entities.
+1. Queries relevant language shards in parallel.  
+2. Computes similarity scores between the query embedding and the vectors for the provided entities.  
 3. For each entity, the highest similarity score across all queried language shards is selected.
 
 This approach ensures a single, deterministic similarity score per entity while accounting for the best available language representation.
@@ -118,21 +119,28 @@ This approach ensures a single, deterministic similarity score per entity while 
 
 ### Benefits
 
-**Scalable language support:** Adding a new language requires adding a new vector database rather than expanding an existing one.
+**Scalable language support:**   
+Adding a new language requires adding a new vector database rather than expanding an existing one.
 
-**Improved search precision:** Smaller vector indexes reduce nearest neighbour approximation errors and improve retrieval quality.
+**Improved search precision:**   
+Smaller vector indexes reduce nearest neighbour approximation errors and improve retrieval quality.
 
-**Improved query efficiency for single-language searches:** Queries targeting a specific language search a smaller index.
+**Improved query efficiency for single-language searches:**   
+Queries targeting a specific language search a smaller index.
 
-**Better control of multilingual exposure:** Using RRF to combine shard results ensures that entities from different languages can appear in results instead of relying solely on embedding similarity scores.
+**Better control of multilingual exposure:**   
+Using RRF to combine shard results ensures that entities from different languages can appear in results instead of relying solely on embedding similarity scores.
 
-**Reduced index size per database:** Smaller indexes are easier to maintain and scale operationally.
+**Reduced index size per database:**   
+Smaller indexes are easier to maintain and scale operationally.
 
 ### Trade-offs
 
-**Increased API complexity:** The API server must now coordinate multiple vector searches, parallelize queries, and fuse results across shards.
+**Increased API complexity:**   
+The API server must now coordinate multiple vector searches, parallelize queries, and fuse results across shards.
 
-**Additional development effort:** The migration required changes to query orchestration, result fusion logic, and search APIs.
+**Additional development effort:**   
+The migration required changes to query orchestration, result fusion logic, and search APIs.
 
 ## Operational Considerations
 
@@ -142,12 +150,12 @@ Shards are logically independent. Failure or degradation of a single language sh
 
 **Adding a new language requires:**
 
-1. Creating a new item vector database
-2. Creating a new property vector database
-3. Adding the appropriate language-specific configuration in [WikidataTextifier](https://github.com/philippesaade-wmde/WikidataTextifier/blob/main/src/Textifier/language_variables.json)
-4. Generating embeddings for all entities in the new language vector database
-5. Generating embeddings for properties, including embeddings that incorporate example usage
-6. Updating the API configuration to include the new shards
+1. Creating a new item vector database for the added language.  
+2. Creating a new property vector database for the added language.  
+3. Adding the appropriate language-specific configuration in [WikidataTextifier](https://github.com/philippesaade-wmde/WikidataTextifier/blob/main/src/Textifier/language_variables.json).  
+4. Generating embeddings for all entities in the new language vector database.  
+5. Generating embeddings for properties, including embeddings that incorporate example usage.  
+6. Updating the API configuration to include the new shards.
 
 Because queries may fan out across multiple shards, system capacity should account for the increased parallel query load as additional languages are introduced.
 
@@ -159,4 +167,4 @@ The previous architecture stored all vectors in a single database. This approach
 
 ### Entity-type split only
 
-Another option was to separate items and properties but keep all languages in a single database. This was rejected because language growth would still increase index size and degrade ANN performance.
+Another option was to separate items and properties, but keep all languages in a single database. This was rejected because language growth would still increase index size and degrade approximate nearest neighbour (similarity) performance.
