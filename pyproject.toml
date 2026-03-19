@@ -14,6 +14,7 @@ dependencies = [
     "pandas>=2.3.3",
     "plotly>=6.3.1",
     "pymysql>=1.1.2",
+    "requests>=2.32.0",
     "setuptools>=80.9.0",
     "slowapi>=0.1.9",
     "sqlalchemy>=2.0.43",
