@@ -73,7 +73,7 @@ async def property_query_route(
         description='Comma separated QIDs to filter by "instance of" class',
     ),
     rerank: bool = Query(False, description="If true, apply a reranker model."),
-    return_vectors: bool = Query(False, description="Temporarily unavailable pending internal review."),
+    return_vectors: bool = Query(False, description="If true, include vector embeddings in the response."),
     exclude_external_ids: bool = Query(False, description="If true, exclude properties with external identifier datatype.")
 ):
     """
@@ -107,12 +107,6 @@ async def property_query_route(
     - **reranker_score** (float, optional): Relevance score from the reranker model, if "rerank" is True.
     """
     start_time = time.time()
-
-    # Temporarily disable pending internal review.
-    if return_vectors:
-        response = "Returning vectors is temporarily disabled, pending internal review."
-        Logger.add_request(request, 422, start_time, error=response)
-        raise HTTPException(status_code=422, detail=response)
 
     if not query:
         response = "Query is missing"
