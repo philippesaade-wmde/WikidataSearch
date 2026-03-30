@@ -1,8 +1,11 @@
+"""Unit tests for API routes, including response shape and rules, input validation, filter building, language normalization, and error handling."""
+
 from fastapi import BackgroundTasks, HTTPException
 import pytest
 
 
 def test_languages_route_returns_split_languages(test_ctx, run_async):
+    """Validate languages route returns split languages."""
     frontend = test_ctx["frontend"]
     data = run_async(frontend.languages())
     assert data["vectordb_langs"] == ["en", "fr"]
@@ -11,6 +14,7 @@ def test_languages_route_returns_split_languages(test_ctx, run_async):
 
 
 def test_item_query_route_returns_items_and_sets_item_filter(test_ctx, run_async, make_request):
+    """Validate results and built filter for item query route."""
     item = test_ctx["item"]
     req = make_request("/item/query/")
     result = run_async(
@@ -34,6 +38,7 @@ def test_item_query_route_returns_items_and_sets_item_filter(test_ctx, run_async
 
 
 def test_property_query_route_returns_properties(test_ctx, run_async, make_request):
+    """Validate results and built filter for property query route."""
     property_route = test_ctx["property"]
     req = make_request("/property/query/")
     result = run_async(
@@ -59,6 +64,7 @@ def test_property_query_route_returns_properties(test_ctx, run_async, make_reque
 
 
 def test_item_query_route_lowercases_lang_and_uses_expected_ks_k(test_ctx, run_async, make_request):
+    """Validate language normalization and uses expected k for item query route."""
     item = test_ctx["item"]
     req = make_request("/item/query/")
     run_async(
@@ -79,6 +85,7 @@ def test_item_query_route_lowercases_lang_and_uses_expected_ks_k(test_ctx, run_a
 
 
 def test_property_query_route_without_exclude_external_ids_does_not_set_datatype_filter(test_ctx, run_async, make_request):
+    """Validate external ids exclusion for property query route."""
     property_route = test_ctx["property"]
     req = make_request("/property/query/")
     run_async(
@@ -101,6 +108,7 @@ def test_property_query_route_without_exclude_external_ids_does_not_set_datatype
 
 
 def test_similarity_score_route_returns_qids_and_pids(test_ctx, run_async, make_request):
+    """Validate qids and pids results for similarity score route."""
     similarity = test_ctx["similarity"]
     req = make_request("/similarity-score/")
     result = run_async(
@@ -121,6 +129,7 @@ def test_similarity_score_route_returns_qids_and_pids(test_ctx, run_async, make_
 
 
 def test_similarity_score_route_rejects_too_many_ids_with_422(test_ctx, run_async, make_request):
+    """Validate IDs limit 422 error for similarity score route."""
     similarity = test_ctx["similarity"]
     req = make_request("/similarity-score/")
     qids = ",".join([f"Q{i}" for i in range(101)])
@@ -181,6 +190,7 @@ def test_similarity_score_route_rejects_too_many_ids_with_422(test_ctx, run_asyn
     ],
 )
 def test_routes_reject_return_vectors_with_422(test_ctx, run_async, make_request, route_name, route_path, call_kwargs):
+    """Temporary validation of return vectors rejection with 422."""
     route = test_ctx[route_name]
     req = make_request(route_path)
     route_fn_name = {
@@ -197,6 +207,7 @@ def test_routes_reject_return_vectors_with_422(test_ctx, run_async, make_request
 
 
 def test_item_query_route_rejects_invalid_instanceof(test_ctx, run_async, make_request):
+    """Validate rejection of invalid instanceof for item query route."""
     item = test_ctx["item"]
     req = make_request("/item/query/")
 
@@ -218,6 +229,7 @@ def test_item_query_route_rejects_invalid_instanceof(test_ctx, run_async, make_r
 
 
 def test_property_query_route_rejects_invalid_instanceof(test_ctx, run_async, make_request):
+    """Validate rejection of invalid instanceof for property query route."""
     property_route = test_ctx["property"]
     req = make_request("/property/query/")
 
@@ -240,6 +252,7 @@ def test_property_query_route_rejects_invalid_instanceof(test_ctx, run_async, ma
 
 
 def test_similarity_score_route_rejects_empty_qid_list(test_ctx, run_async, make_request):
+    """Validate rejection of empty qid list for similarity score route."""
     similarity = test_ctx["similarity"]
     req = make_request("/similarity-score/")
 

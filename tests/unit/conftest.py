@@ -1,3 +1,5 @@
+"""Setup for unit tests: fixtures and mock service implementations."""
+
 import asyncio
 import importlib
 import sys
@@ -14,28 +16,35 @@ if str(ROOT) not in sys.path:
 
 
 class DummyLogger:
+    """Dummy class that captures logger calls."""
     calls = []
 
     @staticmethod
     def add_request(*args, **kwargs):
+        """Record a logger call for testing."""
         DummyLogger.calls.append({"args": args, "kwargs": kwargs})
 
 
 class DummyFeedback:
+    """Dummy class that captures feedback writes."""
     calls = []
 
     @staticmethod
     def add_feedback(*args, **kwargs):
+        """Record a feedback call for testing."""
         DummyFeedback.calls.append({"args": args, "kwargs": kwargs})
 
 
 class DummySearch:
+    """Dummy class that returns hard-coded search results."""
     def __init__(self):
+        """Initialize search results."""
         self.calls = []
         self.vectordb_langs = ["en", "fr"]
         self.translator = types.SimpleNamespace(mint_langs=["en", "fr", "de", "ar"])
 
     def search(self, query, **kwargs):
+        """Return hard-coded search rows based on filter type."""
         self.calls.append({"name": "search", "query": query, "kwargs": kwargs})
         filt = kwargs.get("filter") or {}
         if filt.get("metadata.IsProperty"):
@@ -57,6 +66,7 @@ class DummySearch:
         ]
 
     def get_similarity_scores(self, query, qids, **kwargs):
+        """Return hard-coded similarity scores for provided IDs."""
         self.calls.append(
             {
                 "name": "get_similarity_scores",
@@ -76,7 +86,9 @@ class DummySearch:
 
 
 class DummyLimiter:
+    """Dummy class used to bypass rate limiting in unit tests."""
     def limit(self, *_args, **_kwargs):
+        """Return a no-op rate-limit decorator."""
         def _deco(fn):
             return fn
 
@@ -84,6 +96,7 @@ class DummyLimiter:
 
 
 def _identity_cache(*_args, **_kwargs):
+    """Return a decorator that leaves wrapped functions unchanged."""
     def _deco(fn):
         return fn
 
@@ -92,6 +105,7 @@ def _identity_cache(*_args, **_kwargs):
 
 @pytest.fixture(scope="session")
 def test_ctx():
+    """Build an isolated module context with stubbed dependencies."""
     # Ensure a clean import path for this isolated unit-test setup.
     for mod in list(sys.modules):
         if mod.startswith("wikidatasearch"):
@@ -149,6 +163,7 @@ def test_ctx():
 
 @pytest.fixture
 def run_async():
+    """Run an async coroutine in unit tests."""
     def _run(coro):
         return asyncio.run(coro)
 
@@ -157,7 +172,9 @@ def run_async():
 
 @pytest.fixture
 def make_request():
+    """Create a minimal Starlette request object for route calls."""
     def _make(path: str, method: str = "GET", params: dict | None = None) -> Request:
+        """Construct a request scope with query params and test headers."""
         query_string = urlencode(params or {}, doseq=True).encode()
         scope = {
             "type": "http",

@@ -1,3 +1,5 @@
+"""Benchmark analysis tests for language sharding vector search behavior."""
+
 import statistics
 import sys
 import time
@@ -63,6 +65,7 @@ QUERIES_BY_LANG = {
 
 
 def _read_dotenv(path: Path) -> dict[str, str]:
+    """Read key-value pairs from a dotenv file."""
     data: dict[str, str] = {}
     if not path.exists():
         return data
@@ -76,6 +79,7 @@ def _read_dotenv(path: Path) -> dict[str, str]:
 
 
 def _load_api_keys() -> dict[str, str]:
+    """Load and validate API keys required for benchmark execution."""
     root = Path(__file__).resolve().parents[2]
     merged = {}
     merged.update(_read_dotenv(root / ".env"))
@@ -96,6 +100,7 @@ def _load_api_keys() -> dict[str, str]:
 
 
 def _import_search_classes():
+    """Import search classes or skip when dependencies are missing."""
     root = Path(__file__).resolve().parents[2]
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
@@ -112,6 +117,7 @@ def _import_search_classes():
 
 
 def _run_with_retry(func, *args, retries=3, backoff_s=0.5, measure_time=True, **kwargs):
+    """Execute a callable with retry and optional runtime measurement."""
     last_error = None
     for attempt in range(retries):
         start = time.time() if measure_time else None
@@ -129,6 +135,7 @@ def _run_with_retry(func, *args, retries=3, backoff_s=0.5, measure_time=True, **
 
 
 def _make_search(VectorSearch, api_keys, lang=None, max_k=50):
+    """Get or create a cached vector search instance."""
     key = (lang, max_k)
     if key not in SEARCH_CACHE:
         SEARCH_CACHE[key] = VectorSearch(
@@ -141,6 +148,7 @@ def _make_search(VectorSearch, api_keys, lang=None, max_k=50):
 
 
 def _timed_vdb_search(vdb, lang, query, embedding, K, search_filter):
+    """Run one shard search and return rows plus runtime metadata."""
     start = time.time()
     rows = vdb.find(
         filter=search_filter,
@@ -155,6 +163,7 @@ def _timed_vdb_search(vdb, lang, query, embedding, K, search_filter):
 
 
 def _v1_vector_search(VectorSearch, api_keys, query, K=50, max_k=None):
+    """Run all-in-one database vector search across all languages."""
     search = _make_search(VectorSearch, api_keys, max_k=max_k or K)
     embedding, _ = search.calculate_embedding(query, lang="all")
     if embedding is None:
@@ -169,6 +178,7 @@ def _v1_vector_search(VectorSearch, api_keys, query, K=50, max_k=None):
 
 
 def _v2_vector_search(VectorSearch, api_keys, query, langs=None, K=50, max_k=None, include_thread_times=False):
+    """Run sharded-language vector search across all languages."""
     langs = langs or LANGS
     max_k = max_k or K
     searches = {lang: _make_search(VectorSearch, api_keys, lang=lang, max_k=max_k) for lang in langs}
@@ -193,6 +203,7 @@ def _v2_vector_search(VectorSearch, api_keys, query, langs=None, K=50, max_k=Non
 
 
 def _v1_vector_search_lang(VectorSearch, api_keys, query, lang="en", K=50, max_k=None):
+    """Run all-in-one database vector search for one language."""
     search = _make_search(VectorSearch, api_keys, max_k=max_k or K)
     embedding, _ = search.calculate_embedding(query, lang=lang)
     if embedding is None:
@@ -207,6 +218,7 @@ def _v1_vector_search_lang(VectorSearch, api_keys, query, lang="en", K=50, max_k
 
 
 def _v2_vector_search_lang(VectorSearch, api_keys, query, lang="en", K=50, max_k=None):
+    """Run sharded-language vector search for one language."""
     search = _make_search(VectorSearch, api_keys, lang=lang, max_k=max_k or K)
     embedding, _ = search.calculate_embedding(query, lang=lang)
     if embedding is None:
@@ -222,6 +234,7 @@ def _v2_vector_search_lang(VectorSearch, api_keys, query, lang="en", K=50, max_k
 
 
 def _entity_id(item):
+    """Extract a stable entity ID from a search result."""
     metadata = item.get("metadata", {})
     return (
         item.get("QID")
@@ -234,10 +247,12 @@ def _entity_id(item):
 
 
 def _normalize_results(VectorSearch, raw_results, K=50):
+    """Normalize and remove duplicates from vector search results."""
     return VectorSearch.remove_duplicates(raw_results, K=K)
 
 
 def _average_similarity(results, top_n=5):
+    """Compute mean similarity for the top-N results."""
     rows = results[:top_n]
     if not rows:
         return 0.0
@@ -245,6 +260,7 @@ def _average_similarity(results, top_n=5):
 
 
 def _average_dicts(dicts, keys=None):
+    """Compute key-wise averages over a list of dictionaries."""
     if not dicts:
         return {}
     keys = keys or dicts[0].keys()
@@ -252,6 +268,7 @@ def _average_dicts(dicts, keys=None):
 
 
 def _lang_stats_raw(results):
+    """Estimate language exposure ratios from raw search results (before merging)."""
     rows = sorted(results, key=lambda x: x.get("$similarity", 0.0), reverse=True)[:TOP_N_EXPOSURE]
     if not rows:
         return {lang: 0.0 for lang in LANGS}
@@ -268,6 +285,7 @@ def _lang_stats_raw(results):
 
 
 def _lang_stats_rrf(results):
+    """Estimate language exposure ratios from merged results with RRF."""
     rows = sorted(results, key=lambda x: x["similarity_score"], reverse=True)[:TOP_N_EXPOSURE]
     if not rows:
         return {lang: 0.0 for lang in LANGS}
@@ -277,6 +295,7 @@ def _lang_stats_rrf(results):
 
 @pytest.fixture(scope="module")
 def split_benchmark_payload():
+    """Build benchmark payloads for runtime, quality, and recall assertions."""
     HybridSearch, VectorSearch = _import_search_classes()
     api_keys = _load_api_keys()
 
@@ -440,6 +459,7 @@ def split_benchmark_payload():
 
 
 def test_split_benchmark_runtime_and_precision(split_benchmark_payload):
+    """Validate runtime and similarity results are present and as expected."""
     payload = split_benchmark_payload
     assert payload["runtime_v1"] and payload["runtime_v2"]
     assert statistics.mean(payload["runtime_v1"]) > 0.0
@@ -455,6 +475,7 @@ def test_split_benchmark_runtime_and_precision(split_benchmark_payload):
 
 
 def test_split_benchmark_exposure_metrics(split_benchmark_payload):
+    """Validate exposure metrics stay within expected bounds."""
     payload = split_benchmark_payload
     for key in [
         "v1_lang_stats_raw_avg",
@@ -468,6 +489,7 @@ def test_split_benchmark_exposure_metrics(split_benchmark_payload):
 
 
 def test_split_benchmark_expanded_recall(split_benchmark_payload):
+    """Validate expanded-k recall recovery stays above threshold."""
     rows = split_benchmark_payload["recall_rows"]
     assert rows
     for row in rows:
