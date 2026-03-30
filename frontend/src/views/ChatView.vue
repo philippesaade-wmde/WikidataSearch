@@ -185,7 +185,8 @@
                   class="text-blue-600 dark:text-blue-400 cursor-pointer ml-1"
                 />
                 <div
-                  class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-80 p-3 bg-light-menu dark:bg-dark-menu text-sm text-light-text dark:text-dark-text rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"
+                  class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-80 p-3 bg-light-menu dark:bg-dark-menu text-sm text-light-text dark:text-dark-text rounded shadow-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-10 pointer-events-none"
+                  role="tooltip"
                 >
                   <p class="font-semibold mb-2">Search Type Info</p>
                   <p><strong>Items</strong> searches Wikidata entities (QIDs), while <strong>Properties</strong> searches Wikidata properties (PIDs).</p>
