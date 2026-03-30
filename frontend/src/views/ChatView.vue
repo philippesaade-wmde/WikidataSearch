@@ -210,7 +210,7 @@
               {{ useRerank ? 'ON' : 'OFF' }}
             </button>
 
-            <div>
+            <div class="relative">
               <Icon
                 icon="fluent:info-16-regular"
                 class="text-blue-600 dark:text-blue-400 cursor-pointer ml-1"
