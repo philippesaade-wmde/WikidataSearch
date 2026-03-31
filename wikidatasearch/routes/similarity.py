@@ -114,7 +114,8 @@ async def similarity_score_route(
         Logger.add_request(request, 422, start_time, error=response)
         raise HTTPException(status_code=422, detail=response)
 
-    if len(qids) > 100:
+    MAX_NQIDs = 100
+    if len(qids) > MAX_NQIDs:
         response = "Too many QIDs provided. Please provide 100 or fewer QIDs."
         Logger.add_request(request, 422, start_time, error=response)
         raise HTTPException(status_code=422, detail=response)
