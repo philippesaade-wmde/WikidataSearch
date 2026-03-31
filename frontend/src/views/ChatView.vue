@@ -137,6 +137,7 @@
                   />
                   <div
                     class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-80 p-3 bg-light-menu dark:bg-dark-menu text-sm text-light-text dark:text-dark-text rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"
+                    role="tooltip"
                   >
                     <p class="font-semibold mb-3">Language Selection Info</p>
                     <p class="mb-2">
@@ -217,7 +218,7 @@
               />
               <div
                 class="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-80 p-3 bg-light-menu dark:bg-dark-menu text-sm text-light-text dark:text-dark-text rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 group-focus-within:opacity-100 pointer-events-none"
-                role="tootip"
+                role="tooltip"
               >
                 <p class="font-semibold mb-2">Rerank Info</p>
                 <p>Rerank applies an extra relevance model to reorder top results, which can improve quality but increases response time.</p>
