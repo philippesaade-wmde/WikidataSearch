@@ -257,7 +257,10 @@ class VectorSearch(Search):
         Returns:
             tuple[dict, list | None]: The matching database record and its vector.
         """
-        filter = {"metadata.QID": qid} if qid.startswith('Q') else {"metadata.PID": qid}
+        if qid.startswith("Q"):
+            filter = {"metadata.QID": qid, "metadata.IsItem": True}
+        else:
+            filter = {"metadata.PID": qid, "metadata.IsProperty": True}
 
         projection={"metadata": 1, "$vector": 1}
         if return_text:
@@ -286,8 +289,14 @@ class VectorSearch(Search):
             collection = self.pcollection
         elif query_filter.pop('metadata.IsItem', False):
             collection = self.icollection
+        elif "metadata.PID" in query_filter:
+            collection = self.pcollection
+        elif "metadata.QID" in query_filter:
+            collection = self.icollection
 
         if sort:
+            if limit is None:
+                limit = self.max_K
             limit = max(1, min(limit, self.max_K))
 
             results = collection.find(
@@ -323,6 +332,8 @@ class VectorSearch(Search):
         for item in results:
             metadata = item.get("metadata", {})
             ID = metadata.get('QID', metadata.get('PID'))
+            if not ID:
+                continue
             if ID not in seen_qids:
 
                 ID_name = 'QID' if ID.startswith('Q') else 'PID'

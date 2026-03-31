@@ -150,7 +150,7 @@ def test_similarity_score_route_rejects_too_many_ids_with_422(test_ctx, run_asyn
 
 
 @pytest.mark.parametrize(
-    ("route_name", "route_path", "call_kwargs"),
+    ("route_name", "route_path", "call_kwargs", "search_call_name"),
     [
         (
             "item",
@@ -163,6 +163,7 @@ def test_similarity_score_route_rejects_too_many_ids_with_422(test_ctx, run_asyn
                 "rerank": False,
                 "return_vectors": True,
             },
+            "search",
         ),
         (
             "property",
@@ -176,6 +177,7 @@ def test_similarity_score_route_rejects_too_many_ids_with_422(test_ctx, run_asyn
                 "return_vectors": True,
                 "exclude_external_ids": False,
             },
+            "search",
         ),
         (
             "similarity",
@@ -186,11 +188,20 @@ def test_similarity_score_route_rejects_too_many_ids_with_422(test_ctx, run_asyn
                 "lang": "all",
                 "return_vectors": True,
             },
+            "get_similarity_scores",
         ),
     ],
 )
-def test_routes_reject_return_vectors_with_422(test_ctx, run_async, make_request, route_name, route_path, call_kwargs):
-    """Temporary validation of return vectors rejection with 422."""
+def test_routes_accept_and_forward_return_vectors(
+    test_ctx,
+    run_async,
+    make_request,
+    route_name,
+    route_path,
+    call_kwargs,
+    search_call_name,
+):
+    """Validate return_vectors=True is accepted and forwarded to the search layer."""
     route = test_ctx[route_name]
     req = make_request(route_path)
     route_fn_name = {
@@ -200,10 +211,11 @@ def test_routes_reject_return_vectors_with_422(test_ctx, run_async, make_request
     }[route_name]
     route_fn = getattr(route, route_fn_name)
 
-    with pytest.raises(HTTPException) as exc:
-        run_async(route_fn(req, BackgroundTasks(), **call_kwargs))
-
-    assert exc.value.status_code == 422
+    result = run_async(route_fn(req, BackgroundTasks(), **call_kwargs))
+    assert result
+    last_call = test_ctx["search"].calls[-1]
+    assert last_call["name"] == search_call_name
+    assert last_call["kwargs"]["return_vectors"] is True
 
 
 def test_item_query_route_rejects_invalid_instanceof(test_ctx, run_async, make_request):

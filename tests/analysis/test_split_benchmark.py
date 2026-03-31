@@ -248,7 +248,8 @@ def _entity_id(item):
 
 def _normalize_results(VectorSearch, raw_results, K=50):
     """Normalize and remove duplicates from vector search results."""
-    return VectorSearch.remove_duplicates(raw_results, K=K)
+    deduped = VectorSearch.remove_duplicates(raw_results)
+    return deduped[:K]
 
 
 def _average_similarity(results, top_n=5):

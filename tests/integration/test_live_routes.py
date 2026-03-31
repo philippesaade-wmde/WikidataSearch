@@ -127,27 +127,30 @@ def test_similarity_score_mixed_ids_contract():
     assert _scores_non_increasing(rows)
 
 
-def test_reject_return_vectors_for_item_property_and_similarity():
-    """Temporary validation of return vectors rejection with 422."""
+def test_return_vectors_for_item_property_and_similarity():
+    """Validate vector payloads are returned when return_vectors=true."""
     item = _api_get(
         "/item/query/",
         params={"query": "Douglas Adams", "return_vectors": True},
-        expected_status=422,
+        expected_status=200,
     )
     prop = _api_get(
         "/property/query/",
         params={"query": "instance of", "return_vectors": True},
-        expected_status=422,
+        expected_status=200,
     )
     sim = _api_get(
         "/similarity-score/",
         params={"query": "capital of France", "qid": "Q42", "return_vectors": True},
-        expected_status=422,
+        expected_status=200,
     )
 
-    assert item["status"] == 422
-    assert prop["status"] == 422
-    assert sim["status"] == 422
+    for result in (item, prop, sim):
+        rows = result["payload"]
+        assert isinstance(rows, list)
+        if rows:
+            assert all("vector" in row for row in rows)
+            assert all(isinstance(row["vector"], list) for row in rows)
 
 
 def test_similarity_score_rejects_more_than_100_ids():

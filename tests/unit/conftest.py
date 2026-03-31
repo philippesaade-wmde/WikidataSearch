@@ -128,6 +128,7 @@ def test_ctx():
     fake_logger = types.ModuleType("wikidatasearch.services.logger")
     fake_logger.Logger = DummyLogger
     fake_logger.Feedback = DummyFeedback
+    fake_logger.engine = object()
     sys.modules["wikidatasearch.services.logger"] = fake_logger
 
     fake_analytics = types.ModuleType("wikidatasearch.services.analytics")
