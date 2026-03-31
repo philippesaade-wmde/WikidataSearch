@@ -50,7 +50,7 @@ router = APIRouter(
 
 @router.get(
     "/similarity-score/",
-    summary="Compute similarity scores for specific Wikidata IDs",
+    summary="Compute similarity scores for specific Wikidata QIDs and PIDs",
     operation_id="similarityScoreQuery",
     response_model=List[SimilarityScore],
     response_model_exclude_none=True,
