@@ -11,6 +11,7 @@ from ..services.logger import Logger
 
 
 class ItemQuery(BaseModel):
+    """Represents one item search result."""
     QID: str = Field(..., description="Wikidata item QID")
     similarity_score: float = Field(..., description="Dot product similarity")
     rrf_score: Optional[float] = Field(0.0, description="Reciprocal Rank Fusion score")

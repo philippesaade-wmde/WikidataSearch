@@ -11,6 +11,7 @@ from ..services.logger import Logger
 
 
 class PropertyQuery(BaseModel):
+    """Represents one property search result."""
     PID: str = Field(..., description="Wikidata property PID")
     similarity_score: float = Field(..., description="Dot product similarity")
     rrf_score: Optional[float] = Field(0.0, description="Reciprocal Rank Fusion score")

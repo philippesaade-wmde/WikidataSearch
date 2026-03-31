@@ -11,6 +11,7 @@ from ..services.logger import Logger
 
 
 class SimilarityScore(BaseModel):
+    """Represents one similarity score result for a Wikidata entity (With either a QID or PID)."""
     QID: Optional[str] = Field(None, description="Wikidata entity QID")
     PID: Optional[str] = Field(None, description="Wikidata property PID")
     similarity_score: float = Field(..., description="Dot product similarity")
@@ -18,8 +19,9 @@ class SimilarityScore(BaseModel):
 
     @model_validator(mode="after")
     def check_id(self):
-        if not self.QID and not self.PID:
-            raise ValueError("Either QID or PID must be present")
+        """Ensures that exactly one of QID or PID is provided."""
+        if (self.QID is None) == (self.PID is None):
+            raise ValueError("One of QID or PID must be present")
         return self
 
 router = APIRouter(
