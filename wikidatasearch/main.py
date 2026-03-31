@@ -7,7 +7,7 @@ from gradio.routes import mount_gradio_app
 from .services.analytics import build_analytics_app
 from .config import settings
 from .dependencies import register_rate_limit
-from .routes import item, property, similarity, frontend
+from .routes import item, property, similarity, frontend, health
 
 
 app = FastAPI(
@@ -41,6 +41,7 @@ app.include_router(item.router)
 app.include_router(property.router)
 app.include_router(similarity.router)
 app.include_router(frontend.router)
+app.include_router(health.router)
 
 frontend.mount_static(app)
 
