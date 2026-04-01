@@ -1,11 +1,13 @@
+# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
+import re
+from concurrent.futures import ThreadPoolExecutor
+
+from ..jina import JinaAIAPI
+from ..translator import Translator
+from .KeywordSearch import KeywordSearch
 from .Search import Search
 from .VectorSearch import VectorSearch
-from .KeywordSearch import KeywordSearch
-from ..translator import Translator
-from ..jina import JinaAIAPI
 
-from concurrent.futures import ThreadPoolExecutor
-import re
 
 class HybridSearch(Search):
     name = "Hybrid Search"
@@ -15,8 +17,7 @@ class HybridSearch(Search):
                  dest_lang: str = "en",
                  vectordb_langs: list[str] | None = None,
                  max_K: int = 50):
-        """
-        Initialize hybrid search with keyword and per-language vector backends.
+        """Initialize hybrid search with keyword and per-language vector backends.
 
         Args:
             api_keys (dict): API credentials and AstraDB configuration.
@@ -54,8 +55,7 @@ class HybridSearch(Search):
                lang: str = 'all',
                rerank: bool = False,
                return_vectors: bool = False) -> list:
-        """
-        Search for items based on the query and filter using both keyword and vector search.
+        """Search for items based on the query and filter using both keyword and vector search.
 
         Args:
             query (str): The search query string.
@@ -191,8 +191,7 @@ class HybridSearch(Search):
                               lang: str = "all",
                               return_vectors: bool = False,
                               return_text: bool = False) -> list:
-        """
-        Get similarity scores for a list of items against a query.
+        """Get similarity scores for a list of items against a query.
 
         Args:
             query (str): The query string.
@@ -259,8 +258,7 @@ class HybridSearch(Search):
     @staticmethod
     def reciprocal_rank_fusion(results: list,
                                k: int = 50) -> list:
-        """
-        Combine result lists with Reciprocal Rank Fusion (RRF).
+        """Combine result lists with Reciprocal Rank Fusion (RRF).
 
         Args:
             results (list): Sequence of `(source_name, source_results)` tuples.

@@ -1,4 +1,7 @@
-"""Unit tests for search helpers, including reciprocal rank fusion, deduplication, query cleaning, search routing, and embedding lookup by ID."""
+"""Unit tests for search helpers.
+
+Covers reciprocal rank fusion, deduplication, query cleaning, search routing, and embedding lookup by ID.
+"""
 
 import importlib
 import sys
@@ -6,7 +9,7 @@ import types
 
 
 def _ensure_service_import_stubs():
-    """Install lightweight stubs into system modules for unit tests without real extneral dependencies"""
+    """Install lightweight stubs into system modules for unit tests without real external dependencies."""
     if "requests" not in sys.modules:
         fake_requests = types.ModuleType("requests")
         fake_requests.get = lambda *args, **kwargs: None
@@ -33,7 +36,7 @@ def _ensure_service_import_stubs():
         fake_jina = types.ModuleType("wikidatasearch.services.jina")
 
         class _DummyJina:
-            """Minimal Jina client stub"""
+            """Minimal Jina client stub."""
             def __init__(self, *_args, **_kwargs):
                 """Accept arbitrary constructor args in tests."""
                 pass
@@ -82,7 +85,7 @@ def test_reciprocal_rank_fusion_merges_sources_and_accumulates_rrf(test_ctx):
 
 
 def test_vector_remove_duplicates_prefers_best_similarity_and_keeps_unique_results(test_ctx):
-    """Validate removing duplicates that keeps unique results with the highest similarity scores"""
+    """Validate removing duplicates that keeps unique results with the highest similarity scores."""
     _, _, VectorSearch = _service_classes()
     raw_results = [
         {"metadata": {"QID": "Q42"}, "$similarity": 0.60, "$vector": [0.1], "content": "A"},

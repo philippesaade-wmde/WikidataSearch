@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-
 pytestmark = [pytest.mark.analysis, pytest.mark.benchmark, pytest.mark.slow]
 
 LANGS = ["en", "fr", "de", "ar"]

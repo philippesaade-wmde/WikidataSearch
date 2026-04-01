@@ -1,10 +1,12 @@
-from .Search import Search
-from ..jina import JinaAIAPI
-
+# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
 import re
 
 from astrapy import DataAPIClient
 from astrapy.api_options import APIOptions, TimeoutOptions
+
+from ..jina import JinaAIAPI
+from .Search import Search
+
 
 class VectorSearch(Search):
     name = "Vector Search"
@@ -16,8 +18,7 @@ class VectorSearch(Search):
                  embedding_model=None,
                  max_K: int = 50
         ):
-        """
-        Initialize the Vector Database connection and embedding model.
+        """Initialize the Vector Database connection and embedding model.
 
         Args:
             api_keys (dict): API credentials for AstraDB and Jina.
@@ -70,8 +71,7 @@ class VectorSearch(Search):
                K: int = 50,
                return_vectors: bool = False,
                return_text: bool = False) -> list:
-        """
-        Retrieve similar Wikidata items from the vector database for a given query string.
+        """Retrieve similar Wikidata items from the vector database for a given query string.
 
         Args:
             query (str): The search query string.
@@ -163,8 +163,7 @@ class VectorSearch(Search):
                               lang: str = 'all',
                               return_vectors: bool = False,
                               return_text: bool = False) -> list:
-        """
-        Retrieve similarity scores for specific Wikidata IDs using one query.
+        """Retrieve similarity scores for specific Wikidata IDs using one query.
 
         Args:
             query (str): The search query string.
@@ -247,8 +246,7 @@ class VectorSearch(Search):
 
 
     def get_embedding_by_id(self, qid, return_text = False):
-        """
-        Fetch the stored embedding for one Wikidata entity ID.
+        """Fetch the stored embedding for one Wikidata entity ID.
 
         Args:
             qid (str): A Wikidata entity ID (QID or PID).

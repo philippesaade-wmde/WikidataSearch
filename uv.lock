@@ -1693,6 +1693,11 @@ dependencies = [
     { name = "uvicorn" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "astrapy", specifier = ">=2.0.1" },
@@ -1711,6 +1716,9 @@ requires-dist = [
     { name = "stopwordsiso", specifier = ">=0.6.1" },
     { name = "uvicorn", specifier = ">=0.35.0" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "ruff", specifier = ">=0.9.0" }]
 
 [[package]]
 name = "wrapt"

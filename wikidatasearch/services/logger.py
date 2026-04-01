@@ -1,3 +1,11 @@
+# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
+import os
+import re
+import time
+import traceback
+from datetime import datetime, timedelta
+from hashlib import sha256
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -11,12 +19,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.mysql import JSON
 from sqlalchemy.orm import declarative_base, sessionmaker
-from datetime import datetime, timedelta
-import traceback
-import time
-import os
-from hashlib import sha256
-import re
 
 """
 MySQL database setup for storing Wikidata labels in all languages.
@@ -111,7 +113,7 @@ class Logger(Base):
                 )
                 session.add(log_entry)
                 session.commit()
-            except Exception as e:
+            except Exception:
                 session.rollback()
                 traceback.print_exc()
 
@@ -123,7 +125,7 @@ class Logger(Base):
                 old_requests = (
                     session.query(Logger)
                     .filter(Logger.timestamp < cutoff_date)
-                    .filter((Logger.is_redacted.is_(None)) | (Logger.is_redacted == False))
+                    .filter((Logger.is_redacted.is_(None)) | (Logger.is_redacted.is_(False)))
                     .order_by(Logger.id.asc())
                     .yield_per(batch_size)
                 )
@@ -138,7 +140,7 @@ class Logger(Base):
                 if changed:
                     session.commit()
 
-            except Exception as e:
+            except Exception:
                 session.rollback()
                 traceback.print_exc()
 
@@ -168,7 +170,7 @@ class Feedback(Base):
                 )
                 session.add(feedback_entry)
                 session.commit()
-            except Exception as e:
+            except Exception:
                 session.rollback()
                 traceback.print_exc()
 

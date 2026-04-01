@@ -1,11 +1,13 @@
-from typing import List, Optional
-from pydantic import BaseModel, Field
-from fastapi import APIRouter, Depends, Query, Request, BackgroundTasks, HTTPException
-from fastapi_cache.decorator import cache
+# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
 import time
 import traceback
+from typing import List, Optional
 
-from ..config import settings, SEARCH
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi_cache.decorator import cache
+from pydantic import BaseModel, Field
+
+from ..config import SEARCH, settings
 from ..dependencies import limiter, require_descriptive_user_agent
 from ..services.logger import Logger
 
@@ -78,11 +80,13 @@ async def property_query_route(
     ),
     rerank: bool = Query(False, description="If true, apply a reranker model."),
     return_vectors: bool = Query(False, description="If true, include vector embeddings in the response."),
-    exclude_external_ids: bool = Query(False, description="If true, exclude properties with external identifier datatype.")
+    exclude_external_ids: bool = Query(
+        False,
+        description="If true, exclude properties with external identifier datatype.",
+    ),
 ):
-    """
-    Performs vector and keyword search on Wikidata properties, combining results using Reciprocal Rank Fusion (RRF) or an optional reranker model.
-
+    """Performs vector and keyword search on Wikidata properties, combining results
+    using Reciprocal Rank Fusion (RRF) or an optional reranker model.
 
     **Args:**
 

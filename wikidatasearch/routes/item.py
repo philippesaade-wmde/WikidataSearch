@@ -1,11 +1,13 @@
-from typing import List, Optional
-from pydantic import BaseModel, Field
-from fastapi import APIRouter, Depends, Query, Request, BackgroundTasks, HTTPException
-from fastapi_cache.decorator import cache
+# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
 import time
 import traceback
+from typing import List, Optional
 
-from ..config import settings, SEARCH
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi_cache.decorator import cache
+from pydantic import BaseModel, Field
+
+from ..config import SEARCH, settings
 from ..dependencies import limiter, require_descriptive_user_agent
 from ..services.logger import Logger
 
@@ -60,7 +62,11 @@ router = APIRouter(
 async def item_query_route(
         request: Request,
         background_tasks: BackgroundTasks,
-        query: str = Query(..., examples=["Douglas Adams", "Q42", "Who wrote 1984?"], description="Query string to search for"),
+        query: str = Query(
+            ...,
+            examples=["Douglas Adams", "Q42", "Who wrote 1984?"],
+            description="Query string to search for",
+        ),
         lang: str = Query(
             "all",
             description='Language code for the query. Use "all" to search across all vectors.',
@@ -79,9 +85,8 @@ async def item_query_route(
         rerank: bool = Query(False, description="If true, apply a reranker model."),
         return_vectors: bool = Query(False, description="If true, include vector embeddings in the response."),
     ):
-    """
-    Performs vector and keyword search on Wikidata items, combining results using Reciprocal Rank Fusion (RRF) or an optional reranker model.
-
+    """Performs vector and keyword search on Wikidata items, combining results using
+    Reciprocal Rank Fusion (RRF) or an optional reranker model.
 
     **Args:**
 

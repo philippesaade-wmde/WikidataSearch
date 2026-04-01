@@ -1,14 +1,14 @@
+# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 from gradio.routes import mount_gradio_app
 
-from .services.analytics import build_analytics_app
 from .config import settings
 from .dependencies import register_rate_limit
-from .routes import item, property, similarity, frontend, health
-
+from .routes import frontend, health, item, property, similarity
+from .services.analytics import build_analytics_app
 
 app = FastAPI(
     title="Wikidata Vector Search",

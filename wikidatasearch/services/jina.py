@@ -1,12 +1,14 @@
-from typing import List
-import requests
-import numpy as np
+# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
 import base64
+from typing import List
+
+import numpy as np
+import requests
+
 
 class JinaAIAPI:
     def __init__(self, api_key, passage_task="retrieval.passage", query_task="retrieval.query", embedding_dim=512):
-        """
-        Initializes the JinaAIAPI class.
+        """Initializes the JinaAIAPI class.
 
         Parameters:
         - api_key (str): The Jina API key.
@@ -20,8 +22,7 @@ class JinaAIAPI:
         self.embedding_dim = embedding_dim
 
     def api_embed(self, texts, task="retrieval.query"):
-        """
-        Generates an embedding for the given text using the Jina Embeddings API.
+        """Generates an embedding for the given text using the Jina Embeddings API.
 
         Parameters:
         - text (str): The text to embed.
@@ -61,8 +62,7 @@ class JinaAIAPI:
         return embeddings
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """
-        Generates embeddings for a list of document (passage) texts.
+        """Generates embeddings for a list of document (passage) texts.
 
         Parameters:
         - texts (List[str]): A list of document texts to embed.
@@ -74,8 +74,7 @@ class JinaAIAPI:
         return embeddings
 
     def embed_query(self, text: str) -> List[float]:
-        """
-        Generates an embedding for a single query string.
+        """Generates an embedding for a single query string.
 
         Parameters:
         - text (str): The query text to embed.
@@ -87,8 +86,7 @@ class JinaAIAPI:
         return embedding
 
     def api_rerank(self, query, texts):
-        """
-        Generates an embedding for the given text using the Jina Embeddings API.
+        """Generates an embedding for the given text using the Jina Embeddings API.
 
         Parameters:
         - text (str): The text to embed.
@@ -120,8 +118,7 @@ class JinaAIAPI:
         return response_data['results']
 
     def rerank(self, query: str, docs: List[dict]) -> List[dict]:
-        """
-        Scores a list of documents based on their relevance to the given query.
+        """Scores a list of documents based on their relevance to the given query.
 
         Parameters:
         - query (str): The user's query text.
@@ -140,8 +137,7 @@ class JinaAIAPI:
         return docs
 
     def similarity(self, vec1: List[float], vec2: List[float]) -> float:
-        """
-        Computes a clamped dot product between two vectors.
+        """Computes a clamped dot product between two vectors.
 
         Args:
             vec1 (List[float]): The first vector.

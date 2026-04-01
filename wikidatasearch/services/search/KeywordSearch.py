@@ -1,14 +1,17 @@
-from .Search import Search
-from stopwordsiso import stopwords
-import requests
+# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
 import re
+
+import requests
+from stopwordsiso import stopwords
+
+from .Search import Search
+
 
 class KeywordSearch(Search):
     name = "Keyword Search"
 
     def __init__(self):
-        """
-        Initialize nothing!
+        """Initialize nothing!
         """
         pass
 
@@ -17,8 +20,7 @@ class KeywordSearch(Search):
                filter: dict | None = None,
                lang: str = 'en',
                K: int = 5) -> list:
-        """
-        Retrieve Wikidata items based on keyword matching for a given query string.
+        """Retrieve Wikidata items based on keyword matching for a given query string.
 
         Args:
             query (str): The search query string.
@@ -29,7 +31,6 @@ class KeywordSearch(Search):
         Returns:
             list: A list of QIDs or PIDs of the results.
         """
-
         filter = filter or {}
 
         # If the query is a QID or PID, return it directly.
@@ -68,8 +69,7 @@ class KeywordSearch(Search):
         return qids[:K]
 
     def _clean_query(self, query: str, lang: str) -> str:
-        """
-        Remove stop words and split the query into individual terms separated by "OR" for the search.
+        """Remove stop words and split the query into individual terms separated by "OR" for the search.
 
         Parameters:
         - query (str): The query string to process.

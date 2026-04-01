@@ -2,11 +2,10 @@
 
 import json
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 import pytest
-
 
 pytestmark = pytest.mark.integration
 LOCAL_BASE_URL = "http://127.0.0.1:8080"

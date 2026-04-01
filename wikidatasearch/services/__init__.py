@@ -1,3 +1,4 @@
+# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
 from .search import HybridSearch
 
 __all__ = ["HybridSearch", "Logger", "Feedback", "build_analytics_app"]

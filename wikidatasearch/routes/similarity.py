@@ -1,11 +1,13 @@
-from typing import List, Optional
-from pydantic import BaseModel, Field, model_validator
-from fastapi import APIRouter, Depends, Query, Request, BackgroundTasks, HTTPException
-from fastapi_cache.decorator import cache
+# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
 import time
 import traceback
+from typing import List, Optional
 
-from ..config import settings, SEARCH
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi_cache.decorator import cache
+from pydantic import BaseModel, Field, model_validator
+
+from ..config import SEARCH, settings
 from ..dependencies import limiter, require_descriptive_user_agent
 from ..services.logger import Logger
 
@@ -60,19 +62,26 @@ router = APIRouter(
 async def similarity_score_route(
     request: Request,
     background_tasks: BackgroundTasks,
-    query: str = Query(..., examples=["origin of the universe"], description="Query string to compare against Wikidata entities."),
-    qid: str = Query(..., examples=["Q42,Q2,Q36153", "Q2"], description="Comma separated list of Wikidata IDs (QIDs and/or PIDs) to compare the query to."),
+    query: str = Query(
+        ...,
+        examples=["origin of the universe"],
+        description="Query string to compare against Wikidata entities.",
+    ),
+    qid: str = Query(
+        ...,
+        examples=["Q42,Q2,Q36153", "Q2"],
+        description="Comma separated list of Wikidata IDs (QIDs and/or PIDs) to compare the query to.",
+    ),
     lang: str = Query(
         "all",
         description='Language code for the query. Use "all" to compare against all vectors. '
                     'If a specific language is provided, only vectors in that language are used. '
-                    'If no vectors exist for that language, the query will be translated to English and compared against all vectors.',
+                    "If no vectors exist for that language, the query will be translated to English "
+                    "and compared against all vectors.",
     ),
     return_vectors: bool = Query(False, description="If true, include vector embeddings in the response."),
 ):
-    """
-    Computes the similarity score between a query and a specified list of Wikidata entities.
-
+    """Computes the similarity score between a query and a specified list of Wikidata entities.
 
     **Args:**
 

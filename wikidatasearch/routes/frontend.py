@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Request, Query, BackgroundTasks
+# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
+import time
+
+from fastapi import APIRouter, BackgroundTasks, Query, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_cache.decorator import cache
-import time
 
-from ..config import settings, SEARCH
-from ..services.logger import Logger, Feedback
+from ..config import SEARCH, settings
 from ..dependencies import limiter
+from ..services.logger import Feedback, Logger
 
 router = APIRouter(include_in_schema=False)
 

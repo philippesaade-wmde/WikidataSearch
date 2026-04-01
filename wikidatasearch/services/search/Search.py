@@ -1,10 +1,12 @@
-from abc import ABC, abstractmethod
-import requests
+# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
 import os
+from abc import ABC, abstractmethod
+
+import requests
+
 
 class Search(ABC):
-    """
-    Abstract base class for search functionality.
+    """Abstract base class for search functionality.
     """
     name: str # The name of the search implementation.
 
@@ -13,8 +15,7 @@ class Search(ABC):
                query: str,
                filter: dict | None = None,
                K: int = 100) -> list:
-        """
-        Search for items based on the query and filter.
+        """Search for items based on the query and filter.
 
         Args:
             query (str): The search query string.
@@ -28,8 +29,7 @@ class Search(ABC):
 
 
     def get_text_by_ids(self, ids, format='triplet', lang='en') -> str:
-        """
-        Fetches the textual representations of a Wikidata entity by its QID.
+        """Fetches the textual representations of a Wikidata entity by its QID.
 
         Args:
             ids: A Wikidata entity ID.

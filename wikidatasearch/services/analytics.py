@@ -1,3 +1,4 @@
+# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -140,8 +141,7 @@ def load_requests_df(
 # ----------------------------
 
 def _extract_params_col(s: pd.Series) -> pd.DataFrame:
-    """
-    Parse JSON in the 'parameters' column and extract 'rerank' and 'lang'.
+    """Parse JSON in the 'parameters' column and extract 'rerank' and 'lang'.
     Returns a DataFrame with columns ['rerank','lang'] normalized.
     """
     def parse_one(x: Any) -> dict:
@@ -333,7 +333,11 @@ def build_analytics_app():
 
         with gr.Row():
             route_dd = gr.CheckboxGroup(choices=route_choices(), label="Filter routes", value=[])
-            status_dd = gr.CheckboxGroup(choices=[str(s) for s in status_choices()], label="Filter status codes", value=[])
+            status_dd = gr.CheckboxGroup(
+                choices=[str(s) for s in status_choices()],
+                label="Filter status codes",
+                value=[],
+            )
             ua_inc = gr.Textbox(label="User agent contains", placeholder="curl, python-requests, chrome")
             ua_exc = gr.Textbox(label="User agent does NOT contain", placeholder="bot, uptime, healthcheck")
 
@@ -369,6 +373,12 @@ def build_analytics_app():
         btn.click(fn=_run, inputs=inputs, outputs=[ts_plot, bar_plot, table], queue=False)
 
         # Live updates on change without queueing
-        gr.on(triggers=[x.change for x in inputs], fn=_run, inputs=inputs, outputs=[ts_plot, bar_plot, table], queue=False)
+        gr.on(
+            triggers=[x.change for x in inputs],
+            fn=_run,
+            inputs=inputs,
+            outputs=[ts_plot, bar_plot, table],
+            queue=False,
+        )
 
     return demo
