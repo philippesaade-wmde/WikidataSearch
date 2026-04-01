@@ -4,8 +4,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Red Hat Text'],
-        display: ['Red Hat Display']
+        sans: ['Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+        display: ['Roboto', 'Helvetica', 'Arial', 'sans-serif']
       },
       screens: {
         '3xl': '1792px'

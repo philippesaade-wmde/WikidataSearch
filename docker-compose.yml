@@ -42,7 +42,6 @@ services:
     volumes:
       - "./wikidatasearch:/workspace/wikidatasearch"
       - "./data:/workspace/data"
-      - "./frontend:/workspace/frontend"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
