@@ -1,4 +1,5 @@
-# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
+"""Hybrid search combining vector, keyword, translation, and reranking flows."""
+
 import re
 from concurrent.futures import ThreadPoolExecutor
 
@@ -10,6 +11,8 @@ from .VectorSearch import VectorSearch
 
 
 class HybridSearch(Search):
+    """Search implementation that combines vector and keyword results."""
+
     name = "Hybrid Search"
 
     def __init__(self,
@@ -22,10 +25,8 @@ class HybridSearch(Search):
         Args:
             api_keys (dict): API credentials and AstraDB configuration.
             dest_lang (str, optional): Default translation target language.
-            vectordb_langs (list[str] | None, optional): Languages available in the
-                vector database.
-            max_K (int, optional): Maximum number of vector neighbors requested per
-                shard.
+            vectordb_langs (list[str] | None, optional): Languages available in the vector database.
+            max_K (int, optional): Maximum number of vector neighbors requested per shard.
         """
         vectordb_langs = vectordb_langs or []
         collection = api_keys['ASTRA_DB_COLLECTION']
@@ -60,6 +61,7 @@ class HybridSearch(Search):
         Args:
             query (str): The search query string.
             filter (dict, optional): Additional filtering criteria.
+            embedding (list | None, optional): Precomputed query embedding.
             vs_K (int, optional): Number of top results from Vector Search. Defaults to 50.
             ks_K (int, optional): Number of top results from Keyword Search. Defaults to 5.
             lang (str): The source language of the query. Defaults to "all".
@@ -161,6 +163,20 @@ class HybridSearch(Search):
                K: int = 50,
                return_vectors: bool = False,
                return_text: bool = False) -> list:
+        """Run keyword search and score keyword hits against the query embedding.
+
+        Args:
+            query (str): The query string.
+            filter (dict | None, optional): Filters forwarded to keyword search.
+            embedding (list | None, optional): Optional precomputed query embedding.
+            lang (str, optional): Query language code. Defaults to "all".
+            K (int, optional): Maximum number of keyword candidates. Defaults to 50.
+            return_vectors (bool, optional): Include vectors in returned results.
+            return_text (bool, optional): Include text fields in returned results.
+
+        Returns:
+            list: Scored keyword results.
+        """
         filter = filter or {}
 
         # Perform keyword search
@@ -196,6 +212,7 @@ class HybridSearch(Search):
         Args:
             query (str): The query string.
             qids (list): The list of Wikidata IDs (QIDs/PIDs) to compare against.
+            embedding (list | None, optional): Optional precomputed query embedding.
             lang (str): Query language. Defaults to "all".
             return_vectors (bool): Whether to return vector representations.
             return_text (bool): Whether to return text representations.
@@ -265,8 +282,7 @@ class HybridSearch(Search):
             k (int): Smoothing factor for rank contribution.
 
         Returns:
-            list[dict]: Fused results including QID/PID, similarity score, source,
-            and `rrf_score`.
+            list[dict]: Fused results including QID/PID, similarity score, source, and `rrf_score`.
         """
         scores = {}
 

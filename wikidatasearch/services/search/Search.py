@@ -1,4 +1,5 @@
-# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
+"""Abstract interfaces and shared helpers for search implementations."""
+
 import os
 from abc import ABC, abstractmethod
 
@@ -6,8 +7,7 @@ import requests
 
 
 class Search(ABC):
-    """Abstract base class for search functionality.
-    """
+    """Abstract base class for search functionality."""
     name: str # The name of the search implementation.
 
     @abstractmethod
@@ -23,19 +23,26 @@ class Search(ABC):
             K (int, optional): Number of top results to return. Defaults to 100.
 
         Returns:
-            list: A list of dictionaries containing search results.
+            list: Search results as dictionaries.
         """
         pass
 
 
-    def get_text_by_ids(self, ids, format='triplet', lang='en') -> str:
-        """Fetches the textual representations of a Wikidata entity by its QID.
+    def get_text_by_ids(
+        self,
+        ids: list[str],
+        format: str = "triplet",
+        lang: str = "en",
+    ) -> dict[str, str]:
+        """Fetch textual representations for Wikidata entities.
 
         Args:
-            ids: A Wikidata entity ID.
+            ids (list[str]): Wikidata entity IDs (QIDs and/or PIDs).
+            format (str): Output format requested from the textifier service.
+            lang (str): Preferred language code for generated text.
 
         Returns:
-            text: A textual representation of the Wikidata entity.
+            dict[str, str]: Mapping from entity ID to textual representation.
         """
         if (not bool(lang)) or (lang == 'all'):
             lang = 'en'

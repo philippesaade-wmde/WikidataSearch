@@ -1,4 +1,5 @@
-# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
+"""Dependencies for the FastAPI application."""
+
 import time
 
 from fastapi import FastAPI, HTTPException, Request
@@ -25,9 +26,7 @@ def user_agent_key(request: Request) -> str:
 limiter = Limiter(key_func=user_agent_key)
 
 def require_descriptive_user_agent(request: Request) -> None:
-    """Enforce a descriptive User-Agent.
-    Blocks generic HTTP clients.
-    """
+    """Enforce a descriptive User-Agent and blocks generic HTTP clients."""
     ua = request.headers.get("user-agent", "").strip()
     if not ua or " " not in ua or len(ua) < 10:
         error = "A more descriptive User-Agent is required"
@@ -41,7 +40,6 @@ def _logged_rate_limit_exceeded_handler(request: Request, exc: Exception):
     return _rate_limit_exceeded_handler(request, exc)
 
 def register_rate_limit(app: FastAPI) -> None:
-    """Attach SlowAPI handler. Call once in main.py after creating the app.
-    """
+    """Attach SlowAPI handler. Call once in main.py after creating the app."""
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _logged_rate_limit_exceeded_handler)

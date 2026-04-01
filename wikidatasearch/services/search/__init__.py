@@ -1,4 +1,5 @@
-# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
+"""Search service implementations exposed by the package."""
+
 from .HybridSearch import HybridSearch
 from .KeywordSearch import KeywordSearch
 from .VectorSearch import VectorSearch

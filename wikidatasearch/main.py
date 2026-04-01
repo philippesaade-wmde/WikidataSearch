@@ -1,4 +1,5 @@
-# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
+"""Initialize the FastAPI application."""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_cache import FastAPICache
@@ -34,6 +35,7 @@ register_rate_limit(app)
 # Initialize the cache on startup
 @app.on_event("startup")
 async def startup_event():
+    """Initialize the FastAPI cache at startup."""
     FastAPICache.init(InMemoryBackend(), prefix="wikidata-cache")
 
 # Routers

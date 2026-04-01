@@ -1,4 +1,5 @@
-# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
+"""Routes for direct similarity scoring of Wikidata entities."""
+
 import time
 import traceback
 from typing import List, Optional
@@ -13,7 +14,7 @@ from ..services.logger import Logger
 
 
 class SimilarityScore(BaseModel):
-    """Represents one similarity score result for a Wikidata entity (With either a QID or PID)."""
+    """Represent one similarity result for a Wikidata entity (QID or PID)."""
     QID: Optional[str] = Field(None, description="Wikidata entity QID")
     PID: Optional[str] = Field(None, description="Wikidata property PID")
     similarity_score: float = Field(..., description="Dot product similarity")
@@ -81,29 +82,25 @@ async def similarity_score_route(
     ),
     return_vectors: bool = Query(False, description="If true, include vector embeddings in the response."),
 ):
-    """Computes the similarity score between a query and a specified list of Wikidata entities.
+    """Computes similarity scores between a query and specific Wikidata entities.
 
     **Args:**
 
     - **query** (str): Query string to compare against Wikidata entities.
-    - **qid** (str): Comma-separated list of Wikidata IDs (QIDs and/or PIDs)
-    to compare the query to.
+    - **qid** (str): Comma-separated list of Wikidata IDs (QIDs and/or PIDs) to compare against the query.
     - **lang** (str): Language code for the query.
-    Use "all" to compare with all vectors in the database.
-    If a specific language is provided, only vectors in that language will be used.
-    If no vectors exist for that language, the query will be translated to English and compared against all vectors.
-    - **return_vectors** (bool): Currently unavailable; if set to True this endpoint
-    returns HTTP 422.
-
+      Use `"all"` to compare against all vectors in the database.
+      If a specific language is provided, only vectors in that language are used.
+      If no vectors exist for that language, the query is translated to English and compared against all vectors.
+    - **return_vectors** (bool): If `true`, include vector embeddings in the response.
 
     **Returns:**
 
     Each item in the result list includes:
 
     - **QID**/**PID** (str): Wikidata entity ID of the compared entity.
-    - **similarity_score** (float): Similarity score (dot product) between the entity and the query.
-    - **vector** (list[float], optional): Vector embedding of the entity.
-    Currently omitted because `return_vectors` is disabled.
+    - **similarity_score** (float): Dot product similarity score between the entity and the query.
+    - **vector** (list[float], optional): Present when `return_vectors` is `true`.
     """
     start_time = time.time()
 

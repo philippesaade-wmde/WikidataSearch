@@ -1,4 +1,5 @@
-# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
+"""Keyword-based Wikidata search backed by the Wikidata search API."""
+
 import re
 
 import requests
@@ -8,11 +9,12 @@ from .Search import Search
 
 
 class KeywordSearch(Search):
+    """Search implementation that retrieves candidate IDs from keyword matches."""
+
     name = "Keyword Search"
 
     def __init__(self):
-        """Initialize nothing!
-        """
+        """Initialize the keyword search backend."""
         pass
 
     def search(self,
@@ -26,7 +28,7 @@ class KeywordSearch(Search):
             query (str): The search query string.
             filter (dict, optional): Additional filtering criteria.
             lang (str): The language of the query. Defaults to 'en'.
-            K (int, optional): Number of top results to return. Defaults to 100.
+            K (int, optional): Number of top results to return. Defaults to 5.
 
         Returns:
             list: A list of QIDs or PIDs of the results.
@@ -71,11 +73,12 @@ class KeywordSearch(Search):
     def _clean_query(self, query: str, lang: str) -> str:
         """Remove stop words and split the query into individual terms separated by "OR" for the search.
 
-        Parameters:
-        - query (str): The query string to process.
+        Args:
+            query (str): The query string to process.
+            lang (str): Language code used to remove stop words.
 
         Returns:
-        - str: The cleaned query string suitable for searching.
+            str: The cleaned query string suitable for searching.
         """
         if (not bool(lang)) or (lang == 'all'):
             lang = 'en'

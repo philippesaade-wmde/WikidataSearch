@@ -1,4 +1,5 @@
-# ruff: noqa: D100,D101,D102,D103,D104,D200,D205,D417
+"""Configuration settings for the FastAPI application."""
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .services.search import HybridSearch
