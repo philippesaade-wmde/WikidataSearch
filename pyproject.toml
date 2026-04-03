@@ -47,3 +47,8 @@ convention = "google"
 known-first-party = [
     "wikidatasearch"
 ]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests"
+]
