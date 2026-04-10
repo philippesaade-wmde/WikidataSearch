@@ -40,11 +40,8 @@ class JinaAIAPI:
         Returns:
             List[List[float]]: One embedding vector per input text.
         """
-        url = 'https://api.jina.ai/v1/embeddings'
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {self.api_key}'
-        }
+        url = "https://api.jina.ai/v1/embeddings"
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.api_key}"}
 
         if type(texts) is str:
             texts = [texts]
@@ -55,7 +52,7 @@ class JinaAIAPI:
             "embedding_type": "base64",
             "task": task,
             "late_chunking": False,
-            "input": texts
+            "input": texts,
         }
 
         response = requests.post(url, headers=headers, json=data)
@@ -63,9 +60,9 @@ class JinaAIAPI:
         response_data = response.json()
 
         embeddings = []
-        for item in response_data['data']:
-            binary_data = base64.b64decode(item['embedding'])
-            embedding_array = np.frombuffer(binary_data, dtype='<f4')  # Ensure float32 format
+        for item in response_data["data"]:
+            binary_data = base64.b64decode(item["embedding"])
+            embedding_array = np.frombuffer(binary_data, dtype="<f4")  # Ensure float32 format
             embeddings.append(embedding_array.tolist())
 
         return embeddings
@@ -104,11 +101,8 @@ class JinaAIAPI:
         Returns:
             List[dict]: Jina reranker results with score and index metadata.
         """
-        url = 'https://api.jina.ai/v1/rerank'
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {self.api_key}'
-        }
+        url = "https://api.jina.ai/v1/rerank"
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.api_key}"}
 
         if type(texts) is str:
             texts = [texts]
@@ -117,14 +111,14 @@ class JinaAIAPI:
             "model": "jina-reranker-v2-base-multilingual",
             "query": query,
             "return_documents": False,
-            "documents": texts
+            "documents": texts,
         }
 
         response = requests.post(url, headers=headers, json=data)
         response.raise_for_status()  # Ensure request was successful
         response_data = response.json()
 
-        return response_data['results']
+        return response_data["results"]
 
     def rerank(self, query: str, docs: List[dict]) -> List[dict]:
         """Score and sort documents by relevance to the query.
@@ -136,12 +130,12 @@ class JinaAIAPI:
         Returns:
             List[dict]: Input documents sorted by descending `reranker_score`.
         """
-        texts = [doc['text'] for doc in docs]
+        texts = [doc["text"] for doc in docs]
         scores = self.api_rerank(query, texts)
         for score in scores:
-            docs[score['index']]['reranker_score'] = score['relevance_score']
+            docs[score["index"]]["reranker_score"] = score["relevance_score"]
 
-        docs.sort(key=lambda x: x['reranker_score'], reverse=True)
+        docs.sort(key=lambda x: x["reranker_score"], reverse=True)
         return docs
 
     def similarity(self, vec1: List[float], vec2: List[float]) -> float:

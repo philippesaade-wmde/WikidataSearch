@@ -7,6 +7,7 @@ from ..services.logger import engine
 
 router = APIRouter(tags=["Health"])
 
+
 @router.get("/health/live", include_in_schema=False)
 def live():
     """Return a liveness signal when the API process is running."""

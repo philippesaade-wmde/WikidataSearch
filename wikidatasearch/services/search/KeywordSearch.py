@@ -17,11 +17,7 @@ class KeywordSearch(Search):
         """Initialize the keyword search backend."""
         pass
 
-    def search(self,
-               query: str,
-               filter: dict | None = None,
-               lang: str = 'en',
-               K: int = 5) -> list:
+    def search(self, query: str, filter: dict | None = None, lang: str = "en", K: int = 5) -> list:
         """Retrieve Wikidata items based on keyword matching for a given query string.
 
         Args:
@@ -36,37 +32,31 @@ class KeywordSearch(Search):
         filter = filter or {}
 
         # If the query is a QID or PID, return it directly.
-        if re.fullmatch(r'[PQ]\d+', query):
+        if re.fullmatch(r"[PQ]\d+", query):
             return [query]
 
         query = self._clean_query(query, lang)
 
         if filter.get("metadata.InstanceOf"):
-            instance_of_filter = filter.get("metadata.InstanceOf")['$in']
-            instance_of_filter = '|P31='.join(instance_of_filter)
+            instance_of_filter = filter.get("metadata.InstanceOf")["$in"]
+            instance_of_filter = "|P31=".join(instance_of_filter)
             instance_of_filter = "haswbstatement:P31=" + instance_of_filter
             query = query + " " + instance_of_filter
 
-        params = {
-            'cirrusDumpResult': '',
-            'search': query,
-            'srlimit': K
-        }
-        headers = {
-            'User-Agent': 'Wikidata Vector Database/Alpha Version (embedding@wikimedia.de)'
-        }
+        params = {"cirrusDumpResult": "", "search": query, "srlimit": K}
+        headers = {"User-Agent": "Wikidata Vector Database/Alpha Version (embedding@wikimedia.de)"}
 
         if filter.get("metadata.IsItem", False):
-            params['ns0'] = 1
+            params["ns0"] = 1
         if filter.get("metadata.IsProperty", False):
-            params['ns120'] = 1
+            params["ns120"] = 1
 
         url = "https://www.wikidata.org/w/index.php"
         results = requests.get(url, params=params, headers=headers)
         results.raise_for_status()
 
-        results = results.json()['__main__']['result']['hits']['hits']
-        qids = [item['_source']['title'] for item in results]
+        results = results.json()["__main__"]["result"]["hits"]["hits"]
+        qids = [item["_source"]["title"] for item in results]
 
         return qids[:K]
 
@@ -80,13 +70,12 @@ class KeywordSearch(Search):
         Returns:
             str: The cleaned query string suitable for searching.
         """
-        if (not bool(lang)) or (lang == 'all'):
-            lang = 'en'
+        if (not bool(lang)) or (lang == "all"):
+            lang = "en"
 
         # Remove stopwords
-        query = re.sub(r'[^\w\s]', '', query)
-        query_terms = [tok for tok in query.split() \
-                       if tok.lower() not in stopwords(lang)]
+        query = re.sub(r"[^\w\s]", "", query)
+        query_terms = [tok for tok in query.split() if tok.lower() not in stopwords(lang)]
 
         # Join terms with "OR" for Elasticsearch compatibility
         cleaned_query = " OR ".join(query_terms)

@@ -37,6 +37,7 @@ def _ensure_service_import_stubs():
 
         class _DummyJina:
             """Minimal Jina client stub."""
+
             def __init__(self, *_args, **_kwargs):
                 """Accept arbitrary constructor args in tests."""
                 pass
@@ -54,6 +55,7 @@ def _service_classes():
     vector_module = importlib.import_module("wikidatasearch.services.search.VectorSearch")
 
     return hybrid_module.HybridSearch, keyword_module.KeywordSearch, vector_module.VectorSearch
+
 
 def test_reciprocal_rank_fusion_merges_sources_and_accumulates_rrf(test_ctx):
     """Validate reciprocal rank fusion sources and accumulates rrf score."""

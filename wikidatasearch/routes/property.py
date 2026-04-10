@@ -15,10 +15,11 @@ from ..services.logger import Logger
 
 class PropertyQuery(BaseModel):
     """Represents one property search result."""
+
     PID: str = Field(..., description="Wikidata property PID")
     similarity_score: float = Field(..., description="Dot product similarity")
     rrf_score: Optional[float] = Field(0.0, description="Reciprocal Rank Fusion score")
-    source: Optional[str] = Field('', description="Source of the search")
+    source: Optional[str] = Field("", description="Source of the search")
     vector: Optional[list[float]] = Field(None, description="Present when return_vectors is True")
     reranker_score: Optional[float] = Field(None, description="Present when rerank is True")
 
@@ -26,9 +27,7 @@ class PropertyQuery(BaseModel):
 router = APIRouter(
     prefix="/property",
     tags=["Queries"],
-    dependencies=[
-        Depends(require_descriptive_user_agent)
-    ],
+    dependencies=[Depends(require_descriptive_user_agent)],
     responses={
         200: {
             "description": "List of relevant Wikidata properties sorted by fused similarity scores",

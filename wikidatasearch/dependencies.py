@@ -22,8 +22,10 @@ def user_agent_key(request: Request) -> str:
 
     return f"ua:{ua}"
 
+
 # Consider the user agent for rate limiting since WMcloud requests share the same IP.
 limiter = Limiter(key_func=user_agent_key)
+
 
 def require_descriptive_user_agent(request: Request) -> None:
     """Enforce a descriptive User-Agent and blocks generic HTTP clients."""
@@ -38,6 +40,7 @@ def _logged_rate_limit_exceeded_handler(request: Request, exc: Exception):
     error = str(exc) or "Rate limit exceeded"
     Logger.add_request(request, 429, time.time(), error=error)
     return _rate_limit_exceeded_handler(request, exc)
+
 
 def register_rate_limit(app: FastAPI) -> None:
     """Attach SlowAPI handler. Call once in main.py after creating the app."""

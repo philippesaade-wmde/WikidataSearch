@@ -15,6 +15,7 @@ from ..services.logger import Logger
 
 class SimilarityScore(BaseModel):
     """Represent one similarity result for a Wikidata entity (QID or PID)."""
+
     QID: Optional[str] = Field(None, description="Wikidata entity QID")
     PID: Optional[str] = Field(None, description="Wikidata property PID")
     similarity_score: float = Field(..., description="Dot product similarity")
@@ -27,21 +28,17 @@ class SimilarityScore(BaseModel):
             raise ValueError("One of QID or PID must be present")
         return self
 
+
 router = APIRouter(
     prefix="",
     tags=["Queries"],
-    dependencies=[
-        Depends(require_descriptive_user_agent)
-    ],
+    dependencies=[Depends(require_descriptive_user_agent)],
     responses={
         200: {
             "description": "List of Wikidata entities with their similarity scores to the query.",
             "content": {
                 "application/json": {
-                    "example": [
-                        {"QID": "Q2", "similarity_score": 0.78},
-                        {"QID": "Q36153", "similarity_score": 0.62}
-                    ]
+                    "example": [{"QID": "Q2", "similarity_score": 0.78}, {"QID": "Q36153", "similarity_score": 0.62}]
                 }
             },
         },
@@ -76,9 +73,9 @@ async def similarity_score_route(
     lang: str = Query(
         "all",
         description='Language code for the query. Use "all" to compare against all vectors. '
-                    'If a specific language is provided, only vectors in that language are used. '
-                    "If no vectors exist for that language, the query will be translated to English "
-                    "and compared against all vectors.",
+        "If a specific language is provided, only vectors in that language are used. "
+        "If no vectors exist for that language, the query will be translated to English "
+        "and compared against all vectors.",
     ),
     return_vectors: bool = Query(False, description="If true, include vector embeddings in the response."),
 ):

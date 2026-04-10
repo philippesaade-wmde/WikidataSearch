@@ -26,10 +26,8 @@ class Settings(BaseSettings):
 
     ANALYTICS_API_SECRET: str | None = None
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
 
 # Instantiate settings from .env
 settings = Settings()
@@ -45,5 +43,5 @@ SEARCH = HybridSearch(
     },
     dest_lang=settings.DEST_LANG,
     vectordb_langs=settings.VECTORDb_LANGS,
-    max_K=settings.MAX_VECTORDB_K
+    max_K=settings.MAX_VECTORDB_K,
 )

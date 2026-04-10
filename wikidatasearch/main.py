@@ -32,11 +32,13 @@ app.add_middleware(
 
 register_rate_limit(app)
 
+
 # Initialize the cache on startup
 @app.on_event("startup")
 async def startup_event():
     """Initialize the FastAPI cache at startup."""
     FastAPICache.init(InMemoryBackend(), prefix="wikidata-cache")
+
 
 # Routers
 app.include_router(item.router)
@@ -48,8 +50,4 @@ app.include_router(health.router)
 frontend.mount_static(app)
 
 if settings.ANALYTICS_API_SECRET:
-    mount_gradio_app(
-        app,
-        build_analytics_app(),
-        path=f"/admin/{settings.ANALYTICS_API_SECRET}"
-    )
+    mount_gradio_app(app, build_analytics_app(), path=f"/admin/{settings.ANALYTICS_API_SECRET}")

@@ -22,6 +22,7 @@ GroupBy = Literal["None", "route", "user_agent", "status", "rerank", "lang", "cl
 PERIOD_FREQ = {"Hour": "H", "Day": "D", "Week": "W", "Month": "M"}
 PARAM_KEYS = ("rerank", "lang")
 
+
 @dataclass(frozen=True)
 class QueryFilters:
     """Structured filters for querying the requests data."""
@@ -42,6 +43,7 @@ class QueryFilters:
 # Time helpers
 # ----------------------------
 
+
 def normalize_dt(val: Any) -> datetime:
     """Normalize a datetime-like value to a naive UTC `datetime`."""
     if isinstance(val, datetime):
@@ -49,11 +51,11 @@ def normalize_dt(val: Any) -> datetime:
     if isinstance(val, (int, float)):
         s = float(val)
         # allow ns, us, ms heuristics
-        if s > 1e14:      # ns
+        if s > 1e14:  # ns
             s /= 1e9
-        elif s > 1e11:    # us
+        elif s > 1e11:  # us
             s /= 1e6
-        elif s > 1e10:    # ms
+        elif s > 1e10:  # ms
             s /= 1e3
         return datetime.utcfromtimestamp(s)
     dt = pd.to_datetime(val, utc=True, errors="coerce")
@@ -77,6 +79,7 @@ def _coerce_parameters(value: Any) -> dict:
 # ----------------------------
 # Data access
 # ----------------------------
+
 
 def _build_sql_and_params(
     start: datetime,
@@ -115,6 +118,7 @@ def _build_sql_and_params(
 
     return stmt, params
 
+
 def load_requests_df(
     start: datetime,
     end: datetime,
@@ -145,11 +149,13 @@ def load_requests_df(
 # Transforms
 # ----------------------------
 
+
 def _extract_params_col(s: pd.Series) -> pd.DataFrame:
     """Parse JSON in the `parameters` column and extract `rerank` and `lang`.
 
     Returns a DataFrame with columns ['rerank','lang'] normalized.
     """
+
     def parse_one(x: Any) -> dict:
         d = _coerce_parameters(x)
         rerank = str(d.get("rerank")).strip().lower() if "rerank" in d else ""
@@ -161,6 +167,7 @@ def _extract_params_col(s: pd.Series) -> pd.DataFrame:
 
     parsed = s.map(parse_one)
     return pd.DataFrame(list(parsed))
+
 
 def apply_param_filters(df: pd.DataFrame, rerank_filter: str, langs_filter: List[str]) -> pd.DataFrame:
     """Apply `rerank` and `lang` filters parsed from each row's parameters payload."""
@@ -177,6 +184,7 @@ def apply_param_filters(df: pd.DataFrame, rerank_filter: str, langs_filter: List
     if langs_filter:
         df = df[df["lang"].isin(langs_filter)]
     return df
+
 
 def aggregate_requests(df: pd.DataFrame, period: Period, group_by: GroupBy) -> pd.DataFrame:
     """Aggregate requests by time bucket and optional grouping dimension."""
@@ -209,6 +217,7 @@ def aggregate_requests(df: pd.DataFrame, period: Period, group_by: GroupBy) -> p
 # Charts
 # ----------------------------
 
+
 def empty_ts(group_by: GroupBy):
     """Build an empty time-series chart placeholder for no-data scenarios."""
     if group_by == "None":
@@ -217,6 +226,7 @@ def empty_ts(group_by: GroupBy):
     base = pd.DataFrame({"bucket": [], "requests": [], group_by: []})
     return px.line(base, x="bucket", y="requests", color=group_by, title="No data", markers=True)
 
+
 def empty_bar(group_by: GroupBy):
     """Build an empty bar chart placeholder for no-data scenarios."""
     if group_by == "None":
@@ -224,6 +234,7 @@ def empty_bar(group_by: GroupBy):
         return px.bar(base, x="category", y="requests", title="No data")
     base = pd.DataFrame({group_by: [], "requests": []})
     return px.bar(base, x=group_by, y="requests", title="No data")
+
 
 def make_charts(agg: pd.DataFrame, group_by: GroupBy):
     """Generate timeseries and totals charts from aggregated request data."""
@@ -238,8 +249,7 @@ def make_charts(agg: pd.DataFrame, group_by: GroupBy):
         fig_bar = px.bar(totals, x="category", y="requests", title="Total requests")
     else:
         fig_ts = px.line(
-            agg, x="bucket", y="requests", color=group_by, markers=True,
-            title=f"Requests over time by {group_by}"
+            agg, x="bucket", y="requests", color=group_by, markers=True, title=f"Requests over time by {group_by}"
         )
         totals = agg.groupby(group_by)["requests"].sum().sort_values(ascending=False).reset_index()
         fig_bar = px.bar(totals, x=group_by, y="requests", title=f"Requests by {group_by}")
@@ -249,6 +259,7 @@ def make_charts(agg: pd.DataFrame, group_by: GroupBy):
 # ----------------------------
 # Choice helpers with caching
 # ----------------------------
+
 
 @lru_cache(maxsize=1)
 def route_choices(limit: int = 500) -> List[str]:
@@ -264,6 +275,7 @@ def route_choices(limit: int = 500) -> List[str]:
         df = pd.read_sql(q, conn, params={"limit": limit})
     return df["v"].dropna().astype(str).tolist() if not df.empty else []
 
+
 @lru_cache(maxsize=1)
 def status_choices(limit: int = 500) -> List[int]:
     """Return distinct HTTP status codes for filter controls."""
@@ -277,6 +289,7 @@ def status_choices(limit: int = 500) -> List[int]:
     with engine.connect() as conn:
         df = pd.read_sql(q, conn, params={"limit": limit})
     return sorted([int(x) for x in df["v"].tolist()]) if not df.empty else []
+
 
 @lru_cache(maxsize=1)
 def lang_choices(sample: int = 2000) -> List[str]:
@@ -298,9 +311,11 @@ def lang_choices(sample: int = 2000) -> List[str]:
             vals.add(str(v))
     return sorted(vals)
 
+
 # ----------------------------
 # Orchestration
 # ----------------------------
+
 
 def run_query(filters: QueryFilters):
     """Execute analytics query pipeline and return chart-ready outputs."""
@@ -328,6 +343,7 @@ def run_query(filters: QueryFilters):
 # ----------------------------
 # Public Gradio builder
 # ----------------------------
+
 
 def build_analytics_app():
     """Build and return the Gradio analytics dashboard application."""

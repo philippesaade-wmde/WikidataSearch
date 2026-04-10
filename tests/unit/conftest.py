@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
 
 class DummyLogger:
     """Dummy class that captures logger calls."""
+
     calls = []
 
     @staticmethod
@@ -27,6 +28,7 @@ class DummyLogger:
 
 class DummyFeedback:
     """Dummy class that captures feedback writes."""
+
     calls = []
 
     @staticmethod
@@ -37,6 +39,7 @@ class DummyFeedback:
 
 class DummySearch:
     """Dummy class that returns hard-coded search results."""
+
     def __init__(self):
         """Initialize search results."""
         self.calls = []
@@ -87,8 +90,10 @@ class DummySearch:
 
 class DummyLimiter:
     """Dummy class used to bypass rate limiting in unit tests."""
+
     def limit(self, *_args, **_kwargs):
         """Return a no-op rate-limit decorator."""
+
         def _deco(fn):
             return fn
 
@@ -97,6 +102,7 @@ class DummyLimiter:
 
 def _identity_cache(*_args, **_kwargs):
     """Return a decorator that leaves wrapped functions unchanged."""
+
     def _deco(fn):
         return fn
 
@@ -165,6 +171,7 @@ def test_ctx():
 @pytest.fixture
 def run_async():
     """Run an async coroutine in unit tests."""
+
     def _run(coro):
         return asyncio.run(coro)
 
@@ -174,6 +181,7 @@ def run_async():
 @pytest.fixture
 def make_request():
     """Create a minimal Starlette request object for route calls."""
+
     def _make(path: str, method: str = "GET", params: dict | None = None) -> Request:
         """Construct a request scope with query params and test headers."""
         query_string = urlencode(params or {}, doseq=True).encode()

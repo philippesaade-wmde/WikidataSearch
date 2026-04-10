@@ -13,6 +13,7 @@ from ..services.logger import Feedback, Logger
 
 router = APIRouter(include_in_schema=False)
 
+
 @limiter.limit(settings.RATE_LIMIT)
 @router.get("/")
 async def root(request: Request, background_tasks: BackgroundTasks):
@@ -25,6 +26,7 @@ def mount_static(app):
     """Mount the frontend static assets on the FastAPI app."""
     app.mount("/assets", StaticFiles(directory=f"{settings.FRONTEND_STATIC_DIR}/assets"), name="frontend-assets")
 
+
 @router.get("/languages", summary="Supported languages")
 @cache(expire=settings.CACHE_TTL)
 async def languages():
@@ -36,6 +38,7 @@ async def languages():
         "other_langs": sorted(other_langs),
     }
 
+
 @limiter.limit("10/minute")
 @router.post("/feedback", include_in_schema=False)
 async def feedback(
@@ -43,7 +46,8 @@ async def feedback(
     query: str = Query(..., examples=["testing"]),
     id: str = Query(..., examples=["Q5"]),
     sentiment: str = Query(..., examples=["up"]),
-    index: int = Query(..., examples=[0])):
+    index: int = Query(..., examples=[0]),
+):
     """Record user feedback for a search result."""
     Feedback.add_feedback(query, id, sentiment, index)
     return True

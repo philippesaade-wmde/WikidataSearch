@@ -15,10 +15,11 @@ from ..services.logger import Logger
 
 class ItemQuery(BaseModel):
     """Represents one item search result."""
+
     QID: str = Field(..., description="Wikidata item QID")
     similarity_score: float = Field(..., description="Dot product similarity")
     rrf_score: Optional[float] = Field(0.0, description="Reciprocal Rank Fusion score")
-    source: Optional[str] = Field('', description="Source of the search")
+    source: Optional[str] = Field("", description="Source of the search")
     vector: Optional[list[float]] = Field(None, description="Present when return_vectors is True")
     reranker_score: Optional[float] = Field(None, description="Present when rerank is True")
 
@@ -26,9 +27,7 @@ class ItemQuery(BaseModel):
 router = APIRouter(
     prefix="/item",
     tags=["Queries"],
-    dependencies=[
-        Depends(require_descriptive_user_agent)
-    ],
+    dependencies=[Depends(require_descriptive_user_agent)],
     responses={
         200: {
             "description": "List of relevant Wikidata items sorted by fused similarity scores",
@@ -61,31 +60,31 @@ router = APIRouter(
 @cache(expire=settings.CACHE_TTL)
 @limiter.limit(settings.RATE_LIMIT)
 async def item_query_route(
-        request: Request,
-        background_tasks: BackgroundTasks,
-        query: str = Query(
-            ...,
-            examples=["Douglas Adams", "Q42", "Who wrote 1984?"],
-            description="Query string to search for",
-        ),
-        lang: str = Query(
-            "all",
-            description='Language code for the query. Use "all" to search across all vectors.',
-        ),
-        K: int = Query(
-            settings.MAX_VECTORDB_K,
-            ge=1,
-            le=settings.MAX_VECTORDB_K,
-            description="Number of top results to return",
-        ),
-        instanceof: Optional[str] = Query(
-            None,
-            examples=["Q2", "Q5,Q634"],
-            description='Comma separated QIDs to filter by "instance of".',
-        ),
-        rerank: bool = Query(False, description="If true, apply a reranker model."),
-        return_vectors: bool = Query(False, description="If true, include vector embeddings in the response."),
-    ):
+    request: Request,
+    background_tasks: BackgroundTasks,
+    query: str = Query(
+        ...,
+        examples=["Douglas Adams", "Q42", "Who wrote 1984?"],
+        description="Query string to search for",
+    ),
+    lang: str = Query(
+        "all",
+        description='Language code for the query. Use "all" to search across all vectors.',
+    ),
+    K: int = Query(
+        settings.MAX_VECTORDB_K,
+        ge=1,
+        le=settings.MAX_VECTORDB_K,
+        description="Number of top results to return",
+    ),
+    instanceof: Optional[str] = Query(
+        None,
+        examples=["Q2", "Q5,Q634"],
+        description='Comma separated QIDs to filter by "instance of".',
+    ),
+    rerank: bool = Query(False, description="If true, apply a reranker model."),
+    return_vectors: bool = Query(False, description="If true, include vector embeddings in the response."),
+):
     """Performs vector and keyword search on Wikidata items.
 
     This endpoint combines Vector Search and Keyword Search using Reciprocal Rank Fusion (RRF).

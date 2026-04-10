@@ -92,9 +92,7 @@ def _load_api_keys() -> dict[str, str]:
     ]
     missing = [key for key in required if not merged.get(key)]
     if missing:
-        pytest.skip(
-            "Missing required keys in .env/tests/.env for benchmark: " + ", ".join(missing)
-        )
+        pytest.skip("Missing required keys in .env/tests/.env for benchmark: " + ", ".join(missing))
     return merged
 
 
@@ -108,9 +106,7 @@ def _import_search_classes():
         from wikidatasearch.services.search.HybridSearch import HybridSearch
         from wikidatasearch.services.search.VectorSearch import VectorSearch
     except ModuleNotFoundError as exc:
-        pytest.skip(
-            f"Missing Python module '{exc.name}'. Install dependencies before running benchmark tests."
-        )
+        pytest.skip(f"Missing Python module '{exc.name}'. Install dependencies before running benchmark tests.")
 
     return HybridSearch, VectorSearch
 
@@ -186,8 +182,7 @@ def _v2_vector_search(VectorSearch, api_keys, query, langs=None, K=50, max_k=Non
 
     with ThreadPoolExecutor(max_workers=len(langs)) as ex:
         futures = [
-            ex.submit(_timed_vdb_search, searches[lang], lang, query, embedding, K, search_filter)
-            for lang in langs
+            ex.submit(_timed_vdb_search, searches[lang], lang, query, embedding, K, search_filter) for lang in langs
         ]
 
     payloads = [future.result() for future in futures]
@@ -299,11 +294,7 @@ def split_benchmark_payload():
     HybridSearch, VectorSearch = _import_search_classes()
     api_keys = _load_api_keys()
 
-    all_query_rows = [
-        {"query_lang": lang, "query": query}
-        for lang in LANGS
-        for query in QUERIES_BY_LANG[lang]
-    ]
+    all_query_rows = [{"query_lang": lang, "query": query} for lang in LANGS for query in QUERIES_BY_LANG[lang]]
 
     v1_results, v2_results = [], []
     runtime_v1, runtime_v2 = [], []

@@ -15,11 +15,7 @@ class HybridSearch(Search):
 
     name = "Hybrid Search"
 
-    def __init__(self,
-                 api_keys,
-                 dest_lang: str = "en",
-                 vectordb_langs: list[str] | None = None,
-                 max_K: int = 50):
+    def __init__(self, api_keys, dest_lang: str = "en", vectordb_langs: list[str] | None = None, max_K: int = 50):
         """Initialize hybrid search with keyword and per-language vector backends.
 
         Args:
@@ -29,33 +25,28 @@ class HybridSearch(Search):
             max_K (int, optional): Maximum number of vector neighbors requested per shard.
         """
         vectordb_langs = vectordb_langs or []
-        collection = api_keys['ASTRA_DB_COLLECTION']
+        collection = api_keys["ASTRA_DB_COLLECTION"]
         self.embedding_model = JinaAIAPI(api_keys["JINA_API_KEY"])
         self.vectordb_langs = vectordb_langs
 
         self.vectorsearch = {
-            lang: VectorSearch(
-                api_keys,
-                collection,
-                lang,
-                embedding_model=self.embedding_model,
-                max_K=max_K
-            )
+            lang: VectorSearch(api_keys, collection, lang, embedding_model=self.embedding_model, max_K=max_K)
             for lang in vectordb_langs
         }
         self.keywordsearch = KeywordSearch()
         self.translator = Translator(dest_lang)
 
-
-    def search(self,
-               query: str,
-               filter: dict | None = None,
-               embedding: list | None = None,
-               vs_K: int = 50,
-               ks_K: int = 5,
-               lang: str = 'all',
-               rerank: bool = False,
-               return_vectors: bool = False) -> list:
+    def search(
+        self,
+        query: str,
+        filter: dict | None = None,
+        embedding: list | None = None,
+        vs_K: int = 50,
+        ks_K: int = 5,
+        lang: str = "all",
+        rerank: bool = False,
+        return_vectors: bool = False,
+    ) -> list:
         """Search for items based on the query and filter using both keyword and vector search.
 
         Args:
@@ -72,7 +63,7 @@ class HybridSearch(Search):
             list: A list of fused search results for items and/or properties.
         """
         query_filter = dict(filter or {})
-        is_id = re.fullmatch(r'[PQ]\d+', query)
+        is_id = re.fullmatch(r"[PQ]\d+", query)
 
         lang = (lang or "all").lower()
         vector_query = query
@@ -87,14 +78,14 @@ class HybridSearch(Search):
         if not is_id and embedding is None:
             embedding = self.embedding_model.embed_query(vector_query)
 
-        num_shards = sum([int(vdblang == lang or lang == 'all') for vdblang, _ in self.vectorsearch.items()])
+        num_shards = sum([int(vdblang == lang or lang == "all") for vdblang, _ in self.vectorsearch.items()])
         num_shards = max(num_shards, 1)
-        vs_K = max(10, min(vs_K, (vs_K*2 +1)//num_shards))
+        vs_K = max(10, min(vs_K, (vs_K * 2 + 1) // num_shards))
 
         with ThreadPoolExecutor(max_workers=4) as ex:
             vfunc = []
             for vdblang, vdb in self.vectorsearch.items():
-                if vdblang == lang or lang == 'all':
+                if vdblang == lang or lang == "all":
                     func = ex.submit(
                         vdb.search,
                         vector_query,
@@ -106,44 +97,39 @@ class HybridSearch(Search):
                     )
                     vfunc.append((vdblang, func))
 
-            kfunc = ex.submit(self.keyword_search,
-                           query,
-                           filter=query_filter.copy(),
-                           embedding=embedding,
-                           lang=lang,
-                           K=ks_K,
-                           return_vectors=return_vectors)
+            kfunc = ex.submit(
+                self.keyword_search,
+                query,
+                filter=query_filter.copy(),
+                embedding=embedding,
+                lang=lang,
+                K=ks_K,
+                return_vectors=return_vectors,
+            )
 
             vector_results = {vdblang: f.result() for vdblang, f in vfunc}
             keyword_results = kfunc.result()
 
         # Combine results using Reciprocal Rank Fusion
-        combined_results = [
-            (self.vectorsearch[vdblang].name, vector_results[vdblang])
-            for vdblang, _ in vfunc
-        ]
+        combined_results = [(self.vectorsearch[vdblang].name, vector_results[vdblang]) for vdblang, _ in vfunc]
         combined_results.append((self.keywordsearch.name, keyword_results))
         results = self.reciprocal_rank_fusion(combined_results)
         results = results[:vs_K]
 
         if rerank:
             # Rerank the results with the current Wikidata values.
-            ids = [r.get('QID', r.get('PID')) for r in results]
+            ids = [r.get("QID", r.get("PID")) for r in results]
             ids = [rid for rid in ids if rid]
             if not ids:
                 return results
 
-            wd_data = self.get_text_by_ids(
-                ids,
-                format='triplet',
-                lang=lang
-            )
+            wd_data = self.get_text_by_ids(ids, format="triplet", lang=lang)
             for i in range(len(results)):
-                rid = results[i].get('QID', results[i].get('PID'))
+                rid = results[i].get("QID", results[i].get("PID"))
                 if rid in wd_data:
-                    results[i]['text'] = wd_data[rid]
+                    results[i]["text"] = wd_data[rid]
 
-            results = [r for r in results if r.get('text')]
+            results = [r for r in results if r.get("text")]
             if not results:
                 return results
 
@@ -151,18 +137,20 @@ class HybridSearch(Search):
 
             # Remove text from results to reduce payload size
             for r in results:
-                r.pop('text', None)
+                r.pop("text", None)
 
         return results
 
-    def keyword_search(self,
-               query: str,
-               filter: dict | None = None,
-               embedding: list | None = None,
-               lang: str = 'all',
-               K: int = 50,
-               return_vectors: bool = False,
-               return_text: bool = False) -> list:
+    def keyword_search(
+        self,
+        query: str,
+        filter: dict | None = None,
+        embedding: list | None = None,
+        lang: str = "all",
+        K: int = 50,
+        return_vectors: bool = False,
+        return_text: bool = False,
+    ) -> list:
         """Run keyword search and score keyword hits against the query embedding.
 
         Args:
@@ -180,12 +168,7 @@ class HybridSearch(Search):
         filter = filter or {}
 
         # Perform keyword search
-        keyword_results = self.keywordsearch.search(
-            query,
-            filter=filter,
-            lang=lang,
-            K=K
-        )
+        keyword_results = self.keywordsearch.search(query, filter=filter, lang=lang, K=K)
 
         # Get similarity scores for keyword results
         keyword_results = self.get_similarity_scores(
@@ -194,19 +177,20 @@ class HybridSearch(Search):
             embedding=embedding,
             lang=lang,
             return_vectors=return_vectors,
-            return_text=return_text
+            return_text=return_text,
         )
 
         return keyword_results
 
-
-    def get_similarity_scores(self,
-                              query: str,
-                              qids: list,
-                              embedding: list | None = None,
-                              lang: str = "all",
-                              return_vectors: bool = False,
-                              return_text: bool = False) -> list:
+    def get_similarity_scores(
+        self,
+        query: str,
+        qids: list,
+        embedding: list | None = None,
+        lang: str = "all",
+        return_vectors: bool = False,
+        return_text: bool = False,
+    ) -> list:
         """Get similarity scores for a list of items against a query.
 
         Args:
@@ -226,7 +210,7 @@ class HybridSearch(Search):
         if len(qids) > 100:
             raise ValueError("Too many QIDs provided for similarity scoring. Please provide 100 or fewer QIDs.")
 
-        is_id = re.fullmatch(r'[PQ]\d+', query)
+        is_id = re.fullmatch(r"[PQ]\d+", query)
         lang = (lang or "all").lower()
         vector_query = query
 
@@ -243,14 +227,14 @@ class HybridSearch(Search):
         with ThreadPoolExecutor(max_workers=4) as ex:
             vfunc = []
             for vdblang, vdb in self.vectorsearch.items():
-                if vdblang == lang or lang == 'all':
+                if vdblang == lang or lang == "all":
                     func = ex.submit(
                         vdb.get_similarity_scores,
                         vector_query,
                         qids,
                         embedding=embedding,
                         return_vectors=return_vectors,
-                        return_text=return_text
+                        return_text=return_text,
                     )
                     vfunc.append((vdblang, func))
 
@@ -265,16 +249,11 @@ class HybridSearch(Search):
             if previous is None or item.get("similarity_score", 0.0) > previous.get("similarity_score", 0.0):
                 best_by_id[entity_id] = item
 
-        results = sorted(
-            best_by_id.values(),
-            key=lambda x: x.get("similarity_score", 0.0),
-            reverse=True
-        )
-        return results[:len(qids)]
+        results = sorted(best_by_id.values(), key=lambda x: x.get("similarity_score", 0.0), reverse=True)
+        return results[: len(qids)]
 
     @staticmethod
-    def reciprocal_rank_fusion(results: list,
-                               k: int = 50) -> list:
+    def reciprocal_rank_fusion(results: list, k: int = 50) -> list:
         """Combine result lists with Reciprocal Rank Fusion (RRF).
 
         Args:
@@ -287,34 +266,28 @@ class HybridSearch(Search):
         scores = {}
 
         for source_name, source_results in results:
-
             for rank, item in enumerate(source_results):
-                ID = item.get('QID', item.get('PID'))
+                ID = item.get("QID", item.get("PID"))
 
-                similarity_score = item.get('similarity_score', 0.0)
+                similarity_score = item.get("similarity_score", 0.0)
                 rrf_score = 1.0 / (k + rank + 1)
 
                 if similarity_score > 0.0:
                     if ID not in scores:
                         scores[ID] = {
                             **item,
-                            'rrf_score': rrf_score,
-                            'source': source_name,
-                    }
+                            "rrf_score": rrf_score,
+                            "source": source_name,
+                        }
 
                     else:
-                        scores[ID]['similarity_score'] = max(
-                            similarity_score,
-                            scores[ID].get('similarity_score', 0.0)
-                        )
-                        scores[ID]['rrf_score'] += rrf_score
+                        scores[ID]["similarity_score"] = max(similarity_score, scores[ID].get("similarity_score", 0.0))
+                        scores[ID]["rrf_score"] += rrf_score
 
-                        if source_name not in scores[ID]['source']:
-                            scores[ID]['source'] += f", {source_name}"
+                        if source_name not in scores[ID]["source"]:
+                            scores[ID]["source"] += f", {source_name}"
 
         fused_results = sorted(
-            scores.values(),
-            key=lambda x: (x["rrf_score"], x.get("similarity_score", 0.0)),
-            reverse=True
+            scores.values(), key=lambda x: (x["rrf_score"], x.get("similarity_score", 0.0)), reverse=True
         )
         return fused_results
