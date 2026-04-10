@@ -1,12 +1,17 @@
-from .Search import Search
-from ..jina import JinaAIAPI
+"""Vector search implementation backed by Astra DB collections."""
 
 import re
 
 from astrapy import DataAPIClient
 from astrapy.api_options import APIOptions, TimeoutOptions
 
+from ..jina import JinaAIAPI
+from .Search import Search
+
+
 class VectorSearch(Search):
+    """Search implementation that uses vector similarity over stored embeddings."""
+
     name = "Vector Search"
 
     def __init__(self,
@@ -16,14 +21,12 @@ class VectorSearch(Search):
                  embedding_model=None,
                  max_K: int = 50
         ):
-        """
-        Initialize the Vector Database connection and embedding model.
+        """Initialize the Vector Database connection and embedding model.
 
         Args:
             api_keys (dict): API credentials for AstraDB and Jina.
             collection (str): Base collection name.
-            lang (str | None, optional): Language shard suffix. If `None`, uses
-                non-language-specific collections.
+            lang (str | None, optional): Language shard suffix. If `None`, non-language collections are used.
             embedding_model (object, optional): Pre-initialized embedding model.
             max_K (int, optional): Maximum nearest-neighbor result size.
         """
@@ -70,8 +73,7 @@ class VectorSearch(Search):
                K: int = 50,
                return_vectors: bool = False,
                return_text: bool = False) -> list:
-        """
-        Retrieve similar Wikidata items from the vector database for a given query string.
+        """Retrieve similar Wikidata items from the vector database for a given query string.
 
         Args:
             query (str): The search query string.
@@ -134,6 +136,16 @@ class VectorSearch(Search):
                             query,
                             lang: str = 'en',
                             return_text=False):
+        """Compute query embedding, resolving entity IDs to stored vectors when possible.
+
+        Args:
+            query: Natural-language query or Wikidata entity ID.
+            lang: Language used to resolve fallback text for entity IDs.
+            return_text: Whether downstream calls should also fetch text payloads.
+
+        Returns:
+            tuple[list | None, dict | None]: Query embedding and exact-match entity.
+        """
         if re.fullmatch(r'[PQ]\d+', query):
             item, embedding = self.get_embedding_by_id(
                 query,
@@ -163,8 +175,7 @@ class VectorSearch(Search):
                               lang: str = 'all',
                               return_vectors: bool = False,
                               return_text: bool = False) -> list:
-        """
-        Retrieve similarity scores for specific Wikidata IDs using one query.
+        """Retrieve similarity scores for specific Wikidata IDs using one query.
 
         Args:
             query (str): The search query string.
@@ -247,8 +258,7 @@ class VectorSearch(Search):
 
 
     def get_embedding_by_id(self, qid, return_text = False):
-        """
-        Fetch the stored embedding for one Wikidata entity ID.
+        """Fetch the stored embedding for one Wikidata entity ID.
 
         Args:
             qid (str): A Wikidata entity ID (QID or PID).
@@ -282,6 +292,18 @@ class VectorSearch(Search):
             projection=None,
             limit=50,
             include_similarity=True):
+        """Run a low-level Astra DB query against item or property collections.
+
+        Args:
+            filter: Astra DB filter expression.
+            sort: Optional sort clause, including vector sort.
+            projection: Optional field projection.
+            limit: Maximum number of rows to return when sorting.
+            include_similarity: Whether Astra should include similarity values.
+
+        Returns:
+            list: Raw Astra records matching the query.
+        """
         query_filter = dict(filter or {})
 
         collection = self.icollection
@@ -319,7 +341,16 @@ class VectorSearch(Search):
             return_vectors=False,
             return_text=False
         ):
+        """Collapse duplicate entities and keep the highest-scoring representation.
 
+        Args:
+            results: Raw vector-search records to normalize.
+            return_vectors: Whether to keep vector values in output rows.
+            return_text: Whether to keep text values in output rows.
+
+        Returns:
+            list: Deduplicated dictionaries keyed by QID or PID.
+        """
         results = sorted(
             results,
             key=lambda x: x.get('$similarity', x.get('similarity_score', 0.0)),

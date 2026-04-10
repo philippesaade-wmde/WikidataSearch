@@ -1,3 +1,5 @@
+"""Analytics service for the FastAPI application."""
+
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -22,6 +24,8 @@ PARAM_KEYS = ("rerank", "lang")
 
 @dataclass(frozen=True)
 class QueryFilters:
+    """Structured filters for querying the requests data."""
+
     start: datetime
     end: datetime
     routes: List[str]
@@ -39,6 +43,7 @@ class QueryFilters:
 # ----------------------------
 
 def normalize_dt(val: Any) -> datetime:
+    """Normalize a datetime-like value to a naive UTC `datetime`."""
     if isinstance(val, datetime):
         return val.astimezone(timezone.utc).replace(tzinfo=None)
     if isinstance(val, (int, float)):
@@ -118,6 +123,7 @@ def load_requests_df(
     ua_include: Optional[str],
     ua_exclude: Optional[str],
 ) -> pd.DataFrame:
+    """Load request logs from the database and apply user-agent exclusion filters."""
     stmt, params = _build_sql_and_params(start, end, routes, statuses, ua_include)
     with engine.connect() as conn:
         df = pd.read_sql(stmt, conn, params=params, parse_dates=["timestamp"])
@@ -140,8 +146,8 @@ def load_requests_df(
 # ----------------------------
 
 def _extract_params_col(s: pd.Series) -> pd.DataFrame:
-    """
-    Parse JSON in the 'parameters' column and extract 'rerank' and 'lang'.
+    """Parse JSON in the `parameters` column and extract `rerank` and `lang`.
+
     Returns a DataFrame with columns ['rerank','lang'] normalized.
     """
     def parse_one(x: Any) -> dict:
@@ -157,6 +163,7 @@ def _extract_params_col(s: pd.Series) -> pd.DataFrame:
     return pd.DataFrame(list(parsed))
 
 def apply_param_filters(df: pd.DataFrame, rerank_filter: str, langs_filter: List[str]) -> pd.DataFrame:
+    """Apply `rerank` and `lang` filters parsed from each row's parameters payload."""
     if df.empty:
         return df
     if "parameters" in df.columns:
@@ -172,6 +179,7 @@ def apply_param_filters(df: pd.DataFrame, rerank_filter: str, langs_filter: List
     return df
 
 def aggregate_requests(df: pd.DataFrame, period: Period, group_by: GroupBy) -> pd.DataFrame:
+    """Aggregate requests by time bucket and optional grouping dimension."""
     if df.empty:
         return df
     freq = PERIOD_FREQ[period]
@@ -202,6 +210,7 @@ def aggregate_requests(df: pd.DataFrame, period: Period, group_by: GroupBy) -> p
 # ----------------------------
 
 def empty_ts(group_by: GroupBy):
+    """Build an empty time-series chart placeholder for no-data scenarios."""
     if group_by == "None":
         base = pd.DataFrame({"bucket": [], "requests": []})
         return px.line(base, x="bucket", y="requests", title="No data", markers=True)
@@ -209,6 +218,7 @@ def empty_ts(group_by: GroupBy):
     return px.line(base, x="bucket", y="requests", color=group_by, title="No data", markers=True)
 
 def empty_bar(group_by: GroupBy):
+    """Build an empty bar chart placeholder for no-data scenarios."""
     if group_by == "None":
         base = pd.DataFrame({"category": [], "requests": []})
         return px.bar(base, x="category", y="requests", title="No data")
@@ -216,6 +226,7 @@ def empty_bar(group_by: GroupBy):
     return px.bar(base, x=group_by, y="requests", title="No data")
 
 def make_charts(agg: pd.DataFrame, group_by: GroupBy):
+    """Generate timeseries and totals charts from aggregated request data."""
     if agg.empty:
         return empty_ts(group_by), empty_bar(group_by), pd.DataFrame()
 
@@ -241,6 +252,7 @@ def make_charts(agg: pd.DataFrame, group_by: GroupBy):
 
 @lru_cache(maxsize=1)
 def route_choices(limit: int = 500) -> List[str]:
+    """Return distinct route values for filter controls."""
     q = text("""
         SELECT DISTINCT route AS v
         FROM requests
@@ -254,6 +266,7 @@ def route_choices(limit: int = 500) -> List[str]:
 
 @lru_cache(maxsize=1)
 def status_choices(limit: int = 500) -> List[int]:
+    """Return distinct HTTP status codes for filter controls."""
     q = text("""
         SELECT DISTINCT status AS v
         FROM requests
@@ -267,6 +280,7 @@ def status_choices(limit: int = 500) -> List[int]:
 
 @lru_cache(maxsize=1)
 def lang_choices(sample: int = 2000) -> List[str]:
+    """Return recently observed `lang` parameter values for filter controls."""
     q = text("""
         SELECT parameters
         FROM requests
@@ -289,6 +303,7 @@ def lang_choices(sample: int = 2000) -> List[str]:
 # ----------------------------
 
 def run_query(filters: QueryFilters):
+    """Execute analytics query pipeline and return chart-ready outputs."""
     # Normalize and validate time
     s = normalize_dt(filters.start)
     e = normalize_dt(filters.end)
@@ -315,6 +330,7 @@ def run_query(filters: QueryFilters):
 # ----------------------------
 
 def build_analytics_app():
+    """Build and return the Gradio analytics dashboard application."""
     now = datetime.now(tz=timezone.utc).replace(microsecond=0)
     default_start = now - pd.Timedelta(days=7)
 
@@ -333,7 +349,11 @@ def build_analytics_app():
 
         with gr.Row():
             route_dd = gr.CheckboxGroup(choices=route_choices(), label="Filter routes", value=[])
-            status_dd = gr.CheckboxGroup(choices=[str(s) for s in status_choices()], label="Filter status codes", value=[])
+            status_dd = gr.CheckboxGroup(
+                choices=[str(s) for s in status_choices()],
+                label="Filter status codes",
+                value=[],
+            )
             ua_inc = gr.Textbox(label="User agent contains", placeholder="curl, python-requests, chrome")
             ua_exc = gr.Textbox(label="User agent does NOT contain", placeholder="bot, uptime, healthcheck")
 
@@ -369,6 +389,12 @@ def build_analytics_app():
         btn.click(fn=_run, inputs=inputs, outputs=[ts_plot, bar_plot, table], queue=False)
 
         # Live updates on change without queueing
-        gr.on(triggers=[x.change for x in inputs], fn=_run, inputs=inputs, outputs=[ts_plot, bar_plot, table], queue=False)
+        gr.on(
+            triggers=[x.change for x in inputs],
+            fn=_run,
+            inputs=inputs,
+            outputs=[ts_plot, bar_plot, table],
+            queue=False,
+        )
 
     return demo

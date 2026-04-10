@@ -1,7 +1,10 @@
-"""Unit tests for API routes, including response shape and rules, input validation, filter building, language normalization, and error handling."""
+"""Unit tests for API routes.
 
-from fastapi import BackgroundTasks, HTTPException
+Covers response shape and rules, input validation, filter building, language normalization, and error handling.
+"""
+
 import pytest
+from fastapi import BackgroundTasks, HTTPException
 
 
 def test_languages_route_returns_split_languages(test_ctx, run_async):
@@ -84,7 +87,11 @@ def test_item_query_route_lowercases_lang_and_uses_expected_ks_k(test_ctx, run_a
     assert last_call["kwargs"]["ks_K"] == 2
 
 
-def test_property_query_route_without_exclude_external_ids_does_not_set_datatype_filter(test_ctx, run_async, make_request):
+def test_property_query_route_without_exclude_external_ids_does_not_set_datatype_filter(
+    test_ctx,
+    run_async,
+    make_request,
+):
     """Validate external ids exclusion for property query route."""
     property_route = test_ctx["property"]
     req = make_request("/property/query/")

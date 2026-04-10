@@ -1,11 +1,14 @@
-from typing import List, Optional
-from pydantic import BaseModel, Field
-from fastapi import APIRouter, Depends, Query, Request, BackgroundTasks, HTTPException
-from fastapi_cache.decorator import cache
+"""Routes for Wikidata property search operations."""
+
 import time
 import traceback
+from typing import List, Optional
 
-from ..config import settings, SEARCH
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi_cache.decorator import cache
+from pydantic import BaseModel, Field
+
+from ..config import SEARCH, settings
 from ..dependencies import limiter, require_descriptive_user_agent
 from ..services.logger import Logger
 
@@ -78,39 +81,39 @@ async def property_query_route(
     ),
     rerank: bool = Query(False, description="If true, apply a reranker model."),
     return_vectors: bool = Query(False, description="If true, include vector embeddings in the response."),
-    exclude_external_ids: bool = Query(False, description="If true, exclude properties with external identifier datatype.")
+    exclude_external_ids: bool = Query(
+        False,
+        description="If true, exclude properties with external identifier datatype.",
+    ),
 ):
-    """
-    Performs vector and keyword search on Wikidata properties, combining results using Reciprocal Rank Fusion (RRF) or an optional reranker model.
+    """Performs vector and keyword search on Wikidata properties.
 
+    This endpoint combines Vector Search and Keyword Search using Reciprocal Rank Fusion (RRF).
+    Optionally, reranking can be enabled for additional relevance scoring.
 
     **Args:**
 
     - **query** (str): Query string to search for.
     - **lang** (str): Language code for the query.
-    Use "all" to search across all vectors in the database.
-    If a specific language is provided, only vectors in that language will be searched.
-    If no vectors exist for that language, the query will be translated to English and searched against all vectors.
+      Use `"all"` to search across all vectors in the database.
+      If a specific language is provided, only vectors in that language are searched.
+      If no vectors exist for that language, the query is translated to English and searched against all vectors.
     - **K** (int): Number of top results to return.
-    - **instanceof** (str, optional): Comma-separated list of QIDs to filter results by a specific "instance of" class.
-    - **rerank** (bool): If True, rerank results using a reranker model
-    (This option is slower and generally not necessary for RAG applications).
-    - **return_vectors** (bool): Currently unavailable; if set to True this endpoint
-    returns HTTP 422.
-    - **exclude_external_ids** (bool): If True, exclude properties with external identifier datatype.
-
+    - **instanceof** (str, optional): Comma-separated list of QIDs to filter by a specific "instance of" class.
+    - **rerank** (bool): If `true`, apply a reranker model (slower).
+    - **return_vectors** (bool): If `true`, include vector embeddings in the response.
+    - **exclude_external_ids** (bool): If `true`, exclude properties with external-identifier datatype.
 
     **Returns:**
 
     Each property in the result list includes:
 
     - **PID** (str): Wikidata PID of the property.
-    - **similarity_score** (float): Similarity score (dot product) between the property and the query.
+    - **similarity_score** (float): Dot product similarity score between the property and the query.
     - **rrf_score** (float): Reciprocal Rank Fusion score combining vector and keyword results.
     - **source** (str): Indicates whether the property was found by "Keyword Search", "Vector Search", or both.
-    - **vector** (list[float], optional): Vector embedding of the property.
-    Currently omitted because `return_vectors` is disabled.
-    - **reranker_score** (float, optional): Relevance score from the reranker model, if "rerank" is True.
+    - **vector** (list[float], optional): Present when `return_vectors` is `true`.
+    - **reranker_score** (float, optional): Present when `rerank` is `true`.
     """
     start_time = time.time()
 

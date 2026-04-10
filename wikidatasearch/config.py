@@ -1,5 +1,9 @@
+"""Configuration settings for the FastAPI application."""
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from .services.search import HybridSearch
+
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables or defaults."""

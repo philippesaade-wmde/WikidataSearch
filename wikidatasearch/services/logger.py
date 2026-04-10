@@ -1,3 +1,12 @@
+"""Logging service for the FastAPI application."""
+
+import os
+import re
+import time
+import traceback
+from datetime import datetime, timedelta
+from hashlib import sha256
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -11,12 +20,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.mysql import JSON
 from sqlalchemy.orm import declarative_base, sessionmaker
-from datetime import datetime, timedelta
-import traceback
-import time
-import os
-from hashlib import sha256
-import re
 
 """
 MySQL database setup for storing Wikidata labels in all languages.
@@ -45,6 +48,8 @@ Base = declarative_base()
 Session = sessionmaker(bind=engine, expire_on_commit=False)
 
 class Logger(Base):
+    """Logging model for user requests."""
+
     __tablename__ = 'requests'
     __table_args__ = (
         Index("ix_requests_route_timestamp", "route", "timestamp"),
@@ -76,6 +81,14 @@ class Logger(Base):
 
     @staticmethod
     def add_request(request, status_code, start_time, error=""):
+        """Add a new request log entry.
+
+        Args:
+            request (_type_): The incoming request object.
+            status_code (_type_): The HTTP status code of the response.
+            start_time (_type_): The time when the request was received.
+            error (str, optional): The error message, if any. Defaults to "".
+        """
         with Session() as session:
             try:
                 # Clean up old logs (older than 90 days)
@@ -111,19 +124,25 @@ class Logger(Base):
                 )
                 session.add(log_entry)
                 session.commit()
-            except Exception as e:
+            except Exception:
                 session.rollback()
                 traceback.print_exc()
 
     @staticmethod
     def redact_old_requests(days: int=90, batch_size: int=1000):
+        """Redacts old request logs.
+
+        Args:
+            days (int, optional): The age of logs to redact in days. Defaults to 90.
+            batch_size (int, optional): The number of logs to process in each batch. Defaults to 1000.
+        """
         cutoff_date = datetime.utcnow() - timedelta(days=days)
         with Session() as session:
             try:
                 old_requests = (
                     session.query(Logger)
                     .filter(Logger.timestamp < cutoff_date)
-                    .filter((Logger.is_redacted.is_(None)) | (Logger.is_redacted == False))
+                    .filter((Logger.is_redacted.is_(None)) | (Logger.is_redacted.is_(False)))
                     .order_by(Logger.id.asc())
                     .yield_per(batch_size)
                 )
@@ -138,11 +157,13 @@ class Logger(Base):
                 if changed:
                     session.commit()
 
-            except Exception as e:
+            except Exception:
                 session.rollback()
                 traceback.print_exc()
 
 class Feedback(Base):
+    """Feedback model for user interactions."""
+
     __tablename__ = 'feedback'
     __table_args__ = (
         Index("ix_feedback_qid", "qid"),
@@ -157,6 +178,14 @@ class Feedback(Base):
 
     @staticmethod
     def add_feedback(query, qid, sentiment, index):
+        """Adds feedback for a user query.
+
+        Args:
+            query (str): The user query.
+            qid (str): The Wikidata entity ID.
+            sentiment (str): The sentiment of the feedback.
+            index (int): The index of the feedback.
+        """
         with Session() as session:
             try:
                 # Add new feedback
@@ -168,7 +197,7 @@ class Feedback(Base):
                 )
                 session.add(feedback_entry)
                 session.commit()
-            except Exception as e:
+            except Exception:
                 session.rollback()
                 traceback.print_exc()
 

@@ -1,3 +1,5 @@
+"""Package exports for the Wikidata search application."""
+
 __all__ = ["app"]
 
 

@@ -1,15 +1,20 @@
-from .Search import Search
-from stopwordsiso import stopwords
-import requests
+"""Keyword-based Wikidata search backed by the Wikidata search API."""
+
 import re
 
+import requests
+from stopwordsiso import stopwords
+
+from .Search import Search
+
+
 class KeywordSearch(Search):
+    """Search implementation that retrieves candidate IDs from keyword matches."""
+
     name = "Keyword Search"
 
     def __init__(self):
-        """
-        Initialize nothing!
-        """
+        """Initialize the keyword search backend."""
         pass
 
     def search(self,
@@ -17,19 +22,17 @@ class KeywordSearch(Search):
                filter: dict | None = None,
                lang: str = 'en',
                K: int = 5) -> list:
-        """
-        Retrieve Wikidata items based on keyword matching for a given query string.
+        """Retrieve Wikidata items based on keyword matching for a given query string.
 
         Args:
             query (str): The search query string.
             filter (dict, optional): Additional filtering criteria.
             lang (str): The language of the query. Defaults to 'en'.
-            K (int, optional): Number of top results to return. Defaults to 100.
+            K (int, optional): Number of top results to return. Defaults to 5.
 
         Returns:
             list: A list of QIDs or PIDs of the results.
         """
-
         filter = filter or {}
 
         # If the query is a QID or PID, return it directly.
@@ -68,14 +71,14 @@ class KeywordSearch(Search):
         return qids[:K]
 
     def _clean_query(self, query: str, lang: str) -> str:
-        """
-        Remove stop words and split the query into individual terms separated by "OR" for the search.
+        """Remove stop words and split the query into individual terms separated by "OR" for the search.
 
-        Parameters:
-        - query (str): The query string to process.
+        Args:
+            query (str): The query string to process.
+            lang (str): Language code used to remove stop words.
 
         Returns:
-        - str: The cleaned query string suitable for searching.
+            str: The cleaned query string suitable for searching.
         """
         if (not bool(lang)) or (lang == 'all'):
             lang = 'en'

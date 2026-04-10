@@ -1,3 +1,5 @@
+"""Service-layer exports and lazy imports."""
+
 from .search import HybridSearch
 
 __all__ = ["HybridSearch", "Logger", "Feedback", "build_analytics_app"]
