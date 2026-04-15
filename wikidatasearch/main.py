@@ -1,19 +1,20 @@
+"""Initialize the FastAPI application."""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 from gradio.routes import mount_gradio_app
 
-from .services.analytics import build_analytics_app
 from .config import settings
 from .dependencies import register_rate_limit
-from .routes import item, property, similarity, frontend, health
-
+from .routes import frontend, health, item, property, similarity
+from .services.analytics import build_analytics_app
 
 app = FastAPI(
     title="Wikidata Vector Search",
     description="API for querying the Wikidata Vector Database",
-    version="2.1.0",
+    version="0.2.1",
     openapi_url="/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -31,10 +32,13 @@ app.add_middleware(
 
 register_rate_limit(app)
 
+
 # Initialize the cache on startup
 @app.on_event("startup")
 async def startup_event():
+    """Initialize the FastAPI cache at startup."""
     FastAPICache.init(InMemoryBackend(), prefix="wikidata-cache")
+
 
 # Routers
 app.include_router(item.router)
@@ -46,8 +50,4 @@ app.include_router(health.router)
 frontend.mount_static(app)
 
 if settings.ANALYTICS_API_SECRET:
-    mount_gradio_app(
-        app,
-        build_analytics_app(),
-        path=f"/admin/{settings.ANALYTICS_API_SECRET}"
-    )
+    mount_gradio_app(app, build_analytics_app(), path=f"/admin/{settings.ANALYTICS_API_SECRET}")

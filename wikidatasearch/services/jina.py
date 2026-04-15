@@ -1,40 +1,47 @@
-from typing import List
-import requests
-import numpy as np
+"""Jina AI integration for the FastAPI application."""
+
 import base64
+from typing import List
+
+import numpy as np
+import requests
+
 
 class JinaAIAPI:
-    def __init__(self, api_key, passage_task="retrieval.passage", query_task="retrieval.query", embedding_dim=512):
-        """
-        Initializes the JinaAIAPI class.
+    """Handles interactions with the Jina AI API."""
 
-        Parameters:
-        - api_key (str): The Jina API key.
-        - passage_task (str): Task identifier for embedding documents. Defaults to "retrieval.passage".
-        - query_task (str): Task identifier for embedding queries. Defaults to "retrieval.query".
-        - embedding_dim (int): Dimensionality of the embeddings. Defaults to 1024.
+    def __init__(
+        self,
+        api_key: str,
+        passage_task: str = "retrieval.passage",
+        query_task: str = "retrieval.query",
+        embedding_dim: int = 512,
+    ):
+        """Initialize the Jina API client wrapper.
+
+        Args:
+            api_key (str): Jina API key.
+            passage_task (str): Task identifier for embedding documents.
+            query_task (str): Task identifier for embedding queries.
+            embedding_dim (int): Dimensionality of generated embeddings. Defaults to 512.
         """
         self.api_key = api_key
         self.passage_task = passage_task
         self.query_task = query_task
         self.embedding_dim = embedding_dim
 
-    def api_embed(self, texts, task="retrieval.query"):
-        """
-        Generates an embedding for the given text using the Jina Embeddings API.
+    def api_embed(self, texts: str | List[str], task: str = "retrieval.query") -> List[List[float]]:
+        """Generate embeddings using the Jina embeddings API.
 
-        Parameters:
-        - text (str): The text to embed.
-        - task (str): The task identifier (e.g., "retrieval.query" or "retrieval.passage").
+        Args:
+            texts (str | List[str]): Input text or list of texts to embed.
+            task (str): Task identifier such as `retrieval.query` or `retrieval.passage`.
 
         Returns:
-        - np.ndarray: The resulting embedding vector as a NumPy array.
+            List[List[float]]: One embedding vector per input text.
         """
-        url = 'https://api.jina.ai/v1/embeddings'
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {self.api_key}'
-        }
+        url = "https://api.jina.ai/v1/embeddings"
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.api_key}"}
 
         if type(texts) is str:
             texts = [texts]
@@ -45,7 +52,7 @@ class JinaAIAPI:
             "embedding_type": "base64",
             "task": task,
             "late_chunking": False,
-            "input": texts
+            "input": texts,
         }
 
         response = requests.post(url, headers=headers, json=data)
@@ -53,55 +60,49 @@ class JinaAIAPI:
         response_data = response.json()
 
         embeddings = []
-        for item in response_data['data']:
-            binary_data = base64.b64decode(item['embedding'])
-            embedding_array = np.frombuffer(binary_data, dtype='<f4')  # Ensure float32 format
+        for item in response_data["data"]:
+            binary_data = base64.b64decode(item["embedding"])
+            embedding_array = np.frombuffer(binary_data, dtype="<f4")  # Ensure float32 format
             embeddings.append(embedding_array.tolist())
 
         return embeddings
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """
-        Generates embeddings for a list of document (passage) texts.
+        """Generate embeddings for document (passage) texts.
 
-        Parameters:
-        - texts (List[str]): A list of document texts to embed.
+        Args:
+            texts (List[str]): Document texts to embed.
 
         Returns:
-        - List[List[float]]: A list of embedding vectors, each corresponding to a document.
+            List[List[float]]: Embedding vectors corresponding to input documents.
         """
         embeddings = self.api_embed(texts, task=self.passage_task)
         return embeddings
 
     def embed_query(self, text: str) -> List[float]:
-        """
-        Generates an embedding for a single query string.
+        """Generate an embedding for a single query string.
 
-        Parameters:
-        - text (str): The query text to embed.
+        Args:
+            text (str): Query text to embed.
 
         Returns:
-        - List[float]: The embedding vector corresponding to the query.
+            List[float]: Embedding vector corresponding to the query.
         """
         embedding = self.api_embed([text], task=self.query_task)[0]
         return embedding
 
-    def api_rerank(self, query, texts):
-        """
-        Generates an embedding for the given text using the Jina Embeddings API.
+    def api_rerank(self, query: str, texts: str | List[str]) -> List[dict]:
+        """Rerank documents for a query using the Jina reranker API.
 
-        Parameters:
-        - text (str): The text to embed.
-        - task (str): The task identifier (e.g., "retrieval.query" or "retrieval.passage").
+        Args:
+            query (str): User query to rank documents against.
+            texts (str | List[str]): Candidate document texts.
 
         Returns:
-        - np.ndarray: The resulting embedding vector as a NumPy array.
+            List[dict]: Jina reranker results with score and index metadata.
         """
-        url = 'https://api.jina.ai/v1/rerank'
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {self.api_key}'
-        }
+        url = "https://api.jina.ai/v1/rerank"
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.api_key}"}
 
         if type(texts) is str:
             texts = [texts]
@@ -110,31 +111,41 @@ class JinaAIAPI:
             "model": "jina-reranker-v2-base-multilingual",
             "query": query,
             "return_documents": False,
-            "documents": texts
+            "documents": texts,
         }
 
         response = requests.post(url, headers=headers, json=data)
         response.raise_for_status()  # Ensure request was successful
         response_data = response.json()
 
-        return response_data['results']
+        return response_data["results"]
 
     def rerank(self, query: str, docs: List[dict]) -> List[dict]:
-        """
-        Scores a list of documents based on their relevance to the given query.
+        """Score and sort documents by relevance to the query.
 
-        Parameters:
-        - query (str): The user's query text.
-        - texts (List[str]): A list of document texts to rank.
+        Args:
+            query (str): User query text.
+            docs (List[dict]): Documents containing a `text` field.
 
         Returns:
-        - List[dict]: A list of relevance scores, each corresponding
-        to one document.
+            List[dict]: Input documents sorted by descending `reranker_score`.
         """
-        texts = [doc['text'] for doc in docs]
+        texts = [doc["text"] for doc in docs]
         scores = self.api_rerank(query, texts)
         for score in scores:
-            docs[score['index']]['reranker_score'] = score['relevance_score']
+            docs[score["index"]]["reranker_score"] = score["relevance_score"]
 
-        docs.sort(key=lambda x: x['reranker_score'], reverse=True)
+        docs.sort(key=lambda x: x["reranker_score"], reverse=True)
         return docs
+
+    def similarity(self, vec1: List[float], vec2: List[float]) -> float:
+        """Compute a clamped dot product between two vectors.
+
+        Args:
+            vec1 (List[float]): The first vector.
+            vec2 (List[float]): The second vector.
+
+        Returns:
+            float: max(0.0, dot(vec1, vec2)).
+        """
+        return max(0.0, np.dot(vec1, vec2))

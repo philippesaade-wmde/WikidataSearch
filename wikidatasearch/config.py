@@ -1,5 +1,9 @@
+"""Configuration settings for the FastAPI application."""
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from .services.search import HybridSearch
+
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables or defaults."""
@@ -8,6 +12,7 @@ class Settings(BaseSettings):
     CACHE_TTL: int = 180  # 3 minutes
     RATE_LIMIT: str = "30/minute"
     DEST_LANG: str = "en"
+    MAX_VECTORDB_K: int = 50
     VECTORDb_LANGS: list[str] = ["en", "fr", "ar", "de"]
 
     # --- From .env ---
@@ -19,13 +24,10 @@ class Settings(BaseSettings):
 
     JINA_API_KEY: str | None = None
 
-    API_SECRET: str | None = None
     ANALYTICS_API_SECRET: str | None = None
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
 
 # Instantiate settings from .env
 settings = Settings()
@@ -40,5 +42,6 @@ SEARCH = HybridSearch(
         "JINA_API_KEY": settings.JINA_API_KEY,
     },
     dest_lang=settings.DEST_LANG,
-    vectordb_langs=settings.VECTORDb_LANGS
+    vectordb_langs=settings.VECTORDb_LANGS,
+    max_K=settings.MAX_VECTORDB_K,
 )
