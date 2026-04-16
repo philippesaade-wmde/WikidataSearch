@@ -280,11 +280,6 @@ const vectordbLangs = ref<string[]>([])
 const otherLanguages = ref<string[]>([])
 const selectedLanguage = ref<string>('all')
 
-function apiSecret() {
-  const secret = sessionStorage.getItem('api-secret')
-  return secret?.length ? secret : null
-}
-
 // Fetch /languages on mount
 onMounted(async () => {
   try {
@@ -305,7 +300,6 @@ async function search() {
   error.value = undefined
   displayResponse.value = true
 
-  const secret = apiSecret()
   let lang = selectedLanguage.value.toLowerCase() || 'all'
 
   try {
@@ -315,18 +309,7 @@ async function search() {
       lang,
       rerank: String(useRerank.value),
     })
-    const fetchResult = await fetch(
-      `${base}/?${params.toString()}`,
-      {
-        headers: secret ? { 'x-api-secret': secret } : {}
-      }
-    )
-
-    if (fetchResult.status === 401) {
-      showSettings.value = true
-      displayResponse.value = false
-      return
-    }
+    const fetchResult = await fetch(`${base}/?${params.toString()}`)
 
     const jsonResponse = await fetchResult.json()
 

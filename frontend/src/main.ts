@@ -13,15 +13,13 @@ const i18n = createI18n({
       'chat-prompt': 'Search Wikidata...',
       'no-response-message':
         'Sorry, but no valid response was returned for your question. Please try rephrasing it.',
-      source: 'Source',
-      'enter-api-secret': "Enter your API secret"
+      source: 'Source'
     },
     de: {
       'chat-prompt': 'Suche in Wikidata...',
       'no-response-message':
         'Leider wurde auf Ihre Frage keine gültige Antwort zurückgegeben. Bitte versuchen Sie es umzuformulieren.',
-      source: 'Quelle',
-      'enter-api-secret': "API Passwort eingeben"
+      source: 'Quelle'
     }
   }
 })
