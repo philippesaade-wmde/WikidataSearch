@@ -27,7 +27,8 @@ User-Agent: WikidataSearch-Client/1.0 (your-email@example.org)
 Current operational constraints:
 
 - Rate limit is applied per `User-Agent` (default: `30/minute`).
-- `return_vectors=true` is currently disabled and returns `422`.
+- Query endpoints require a descriptive `User-Agent` header.
+- Current vector shards are `en`, `fr`, `ar`, and `de`.
 
 ## API Endpoints
 
@@ -42,7 +43,7 @@ Parameters:
 - `K` (default/max: `50`): number of top results requested.
 - `instanceof` (optional): comma-separated QIDs used as `P31` filter.
 - `rerank` (default: `false`): apply reranker on textified Wikidata content.
-- `return_vectors` (currently disabled).
+- `return_vectors` (default: `false`): include vectors in response payload.
 
 Example:
 
@@ -66,7 +67,7 @@ Parameters:
 - `instanceof` (optional): comma-separated QIDs used as `P31` filter.
 - `exclude_external_ids` (default: `false`): excludes properties with datatype `external-id`.
 - `rerank` (default: `false`)
-- `return_vectors` (currently disabled)
+- `return_vectors` (default: `false`): include vectors in response payload.
 
 Example:
 
@@ -85,9 +86,9 @@ Similarity scoring for a fixed list of Wikidata IDs (QIDs and/or PIDs) against o
 Parameters:
 
 - `query` (required)
-- `qid` (required): comma-separated IDs, for example `Q42,Q5,P31`.
+- `qid` (required): comma-separated IDs, for example `Q42,Q5,P31` (maximum: `100` IDs).
 - `lang` (default: `all`)
-- `return_vectors` (currently disabled)
+- `return_vectors` (default: `false`): include vectors in response payload.
 
 Example:
 
@@ -107,6 +108,7 @@ curl -sG 'https://wd-vectordb.wmcloud.org/similarity-score/' \
 - `rrf_score`
 - `source` (`Vector Search`, `Keyword Search`, or both)
 - `reranker_score` (when `rerank=true`)
+- `vector` (when `return_vectors=true`)
 
 `/property/query/` returns the same shape with `PID` instead of `QID`.
 
@@ -114,6 +116,7 @@ curl -sG 'https://wd-vectordb.wmcloud.org/similarity-score/' \
 
 - `QID` or `PID`
 - `similarity_score`
+- `vector` (when `return_vectors=true`)
 
 ## Architecture
 
