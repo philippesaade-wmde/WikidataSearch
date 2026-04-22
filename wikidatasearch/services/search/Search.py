@@ -52,8 +52,8 @@ class Search(ABC):
             params = {"id": qid, "lang": lang, "external_ids": False, "format": format}
             headers = {"User-Agent": "Wikidata Vector Database (embedding@wikimedia.de)"}
 
-            url = settings.WD_TEXTIFIER_API
-            results = requests.get(url, params=params, headers=headers)
+            url_textifier = settings.WD_TEXTIFIER_API
+            results = requests.get(url_textifier, params=params, headers=headers)
             results.raise_for_status()
             text.update(results.json())
 
