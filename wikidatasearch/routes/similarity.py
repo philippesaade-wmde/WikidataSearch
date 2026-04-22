@@ -103,24 +103,24 @@ async def similarity_score_route(
 
     if not query:
         response = "Query is missing"
-        Logger.add_request(request, 422, start_time, error=response)
+        background_tasks.add_task(Logger.add_request, request, 422, start_time, error=response)
         raise HTTPException(status_code=422, detail=response)
 
     if not qid:
         response = "QIDs are missing"
-        Logger.add_request(request, 422, start_time, error=response)
+        background_tasks.add_task(Logger.add_request, request, 422, start_time, error=response)
         raise HTTPException(status_code=422, detail=response)
 
     qids = [q.strip() for q in qid.split(",") if q.strip()]
     if not qids:
         response = "No valid QIDs provided"
-        Logger.add_request(request, 422, start_time, error=response)
+        background_tasks.add_task(Logger.add_request, request, 422, start_time, error=response)
         raise HTTPException(status_code=422, detail=response)
 
     MAX_NQIDs = 100
     if len(qids) > MAX_NQIDs:
         response = "Too many QIDs provided. Please provide 100 or fewer QIDs."
-        Logger.add_request(request, 422, start_time, error=response)
+        background_tasks.add_task(Logger.add_request, request, 422, start_time, error=response)
         raise HTTPException(status_code=422, detail=response)
 
     try:
@@ -135,6 +135,6 @@ async def similarity_score_route(
         return results
 
     except Exception as e:
-        Logger.add_request(request, 500, start_time, error=str(e))
+        background_tasks.add_task(Logger.add_request, request, 500, start_time, error=str(e))
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")

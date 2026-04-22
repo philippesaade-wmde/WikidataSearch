@@ -1,6 +1,5 @@
 """Logging service for the FastAPI application."""
 
-import os
 import re
 import time
 import traceback
@@ -21,15 +20,17 @@ from sqlalchemy import (
 from sqlalchemy.dialects.mysql import JSON
 from sqlalchemy.orm import declarative_base, sessionmaker
 
+from ...config import settings
+
 """
 MySQL database setup for storing Wikidata labels in all languages.
 """
 
-DB_HOST = os.environ["DB_HOST"]
-DB_NAME = os.environ["DB_NAME"]
-DB_USER = os.environ["DB_USER"]
-DB_PASS = os.environ["DB_PASS"]
-DB_PORT = int(os.environ.get("DB_PORT", "3306"))
+DB_HOST = settings.DB_HOST
+DB_NAME = settings.DB_NAME
+DB_USER = settings.DB_USER
+DB_PASS = settings.DB_PASS
+DB_PORT = settings.DB_PORT
 
 DATABASE_URL = f"mariadb+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
 

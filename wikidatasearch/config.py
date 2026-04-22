@@ -24,7 +24,16 @@ class Settings(BaseSettings):
 
     JINA_API_KEY: str | None = None
 
+    WD_TEXTIFIER_API: str = "https://wd-textify.wmcloud.org"
+
     ANALYTICS_API_SECRET: str | None = None
+
+    # Database settings for logging
+    DB_NAME: str = "logs"
+    DB_USER: str = ""
+    DB_PASS: str = ""
+    DB_HOST: str = "requestsDB"
+    DB_PORT: int = 3306
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
