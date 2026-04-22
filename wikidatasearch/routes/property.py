@@ -70,7 +70,6 @@ async def property_query_route(
     K: int = Query(
         settings.MAX_VECTORDB_K,
         ge=1,
-        le=settings.MAX_VECTORDB_K,
         description="Number of top results to return",
     ),
     instanceof: Optional[str] = Query(
@@ -118,12 +117,12 @@ async def property_query_route(
 
     if not query:
         response = "Query is missing"
-        Logger.add_request(request, 422, start_time, error=response)
+        background_tasks.add_task(Logger.add_request, request, 422, start_time, error=response)
         raise HTTPException(status_code=422, detail=response)
 
     if K > settings.MAX_VECTORDB_K:
         response = f"K must be less than {settings.MAX_VECTORDB_K}"
-        Logger.add_request(request, 422, start_time, error=response)
+        background_tasks.add_task(Logger.add_request, request, 422, start_time, error=response)
         raise HTTPException(status_code=422, detail=response)
 
     filt = {"metadata.IsProperty": True}
@@ -131,7 +130,7 @@ async def property_query_route(
         qids = [qid.strip() for qid in instanceof.split(",") if qid.strip()]
         if not qids:
             response = "Invalid instanceof filter"
-            Logger.add_request(request, 422, start_time, error=response)
+            background_tasks.add_task(Logger.add_request, request, 422, start_time, error=response)
             raise HTTPException(status_code=422, detail=response)
         filt["metadata.InstanceOf"] = {"$in": qids}
 
@@ -154,6 +153,6 @@ async def property_query_route(
         return results
 
     except Exception as e:
-        Logger.add_request(request, 500, start_time, error=str(e))
+        background_tasks.add_task(Logger.add_request, request, 500, start_time, error=str(e))
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
