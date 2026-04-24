@@ -27,14 +27,10 @@
         </a>
         <div>
           <h1 class="text-3xl sm:text-4xl font-bold">
-              Wikidata Vector Database
+            Wikidata Vector Database
           </h1>
           <p class="text-lg text-light-text dark:text-dark-text leading-relaxed mt-2">
-            The Wikidata Vector Database, part of the 
-            <a href="https://www.wikidata.org/wiki/Wikidata:Embedding_Project" target="_blank"
-               class="text-blue-600 dark:text-blue-400 hover:underline">
-              Wikidata Embedding Project
-            </a>, stores semantic embeddings of Wikidata entities to enable context-aware search using vector similarity.
+            The <a href="https://www.wikidata.org/wiki/Wikidata:Vector_Database" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">Wikidata Vector Database</a>, part of the <a href="https://www.wikidata.org/wiki/Wikidata:Embedding_Project" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">Wikidata Embedding Project</a>, stores semantic embeddings of Wikidata entities to enable context-aware search using vector similarity.
           </p>
         </div>
       </div>
@@ -44,45 +40,15 @@
 
       <p class="!mt-1 text-sm text-red-500">&nbsp;</p>
 
-      <!-- Loading -->
       <div v-if="isChecking" class="text-center py-8">
         <div class="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-        <p class="mt-4 text-light-text dark:text-dark-text">Checking API access...</p>
+        <p class="mt-4 text-light-text dark:text-dark-text">Checking API health...</p>
       </div>
 
-      <!-- Secret input -->
-      <div v-else-if="secretRequired" class="flex flex-col sm:flex-row gap-4 items-center">
-        <div class="relative flex-grow">
-          <Icon
-            class="absolute left-3 top-3 text-xl"
-            :class="{
-              'text-light-text dark:text-dark-text': inputText.length > 0
-            }"
-            icon="fluent:lock-closed-24-filled"
-          />
-          <input
-            v-model="inputText"
-            type="password"
-            class="w-full pl-10 pr-4 h-14 rounded-lg border border-light-distinct-text dark:border-dark-distinct-text bg-light-menu dark:bg-dark-menu text-light-text dark:text-dark-text focus:ring-2 focus:ring-blue-500 outline-none text-lg"
-            :placeholder="$t('enter-api-secret')"
-            autocomplete="off"
-            @input="storeSecret"
-            @keyup.enter="handleEnter"
-          />
-        </div>
-        <button
-          class="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-lg"
-          @click="handleEnter"
-        >
-          Start
-        </button>
-      </div>
-
-      <!-- No secret required -->
       <div v-else class="flex justify-center">
         <button
-          class="px-10 py-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-xl"
-          @click="$emit('close')"
+          class="inline-flex items-center justify-center px-10 py-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-xl"
+          @click="handleEnter"
         >
           Start
         </button>
@@ -132,7 +98,7 @@
       <section class="mt-8">
         <h2 class="text-2xl font-bold mb-4">Help Us Improve</h2>
         <p class="text-light-text dark:text-dark-text mb-4">
-          Share your thoughts and projects if you’re using the Wikidata vector database!
+          Share your thoughts and projects if you're using the Wikidata vector database!
         </p>
 
         <a href="https://wikimedia.sslsurvey.de/Wikidata-Vector-DB-Feedback-Alpha-release" target="_blank" class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
@@ -141,6 +107,44 @@
 
       <p class="!mt-1 text-sm text-red-500">&nbsp;</p>
       </section>
+
+      <!-- Resources -->
+      <section>
+        <h2 class="text-2xl font-bold mb-6">Resources</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="rounded-lg bg-light-distinct dark:bg-dark-distinct p-6">
+            <a href="/docs" target="_blank" class="inline-block px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
+              API Documentation
+            </a>
+            <p class="mt-4 text-sm text-light-distinct-text dark:text-dark-distinct-text">
+              OpenAPI docs for endpoints, parameters, and response models.
+            </p>
+          </div>
+
+          <div class="rounded-lg bg-light-distinct dark:bg-dark-distinct p-6">
+            <a href="https://www.wikidata.org/wiki/Wikidata:Vector_Database" target="_blank"
+               class="inline-block px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
+              Vector Database Page
+            </a>
+            <p class="mt-4 text-sm text-light-distinct-text dark:text-dark-distinct-text">
+              Implementation page for the Wikidata Vector Database, including setup, use cases, and updates.
+            </p>
+          </div>
+
+          <div class="rounded-lg bg-light-distinct dark:bg-dark-distinct p-6">
+            <a href="https://www.wikidata.org/wiki/Wikidata:Embedding_Project" target="_blank"
+               class="inline-block px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
+              Embedding Project Page
+            </a>
+            <p class="mt-4 text-sm text-light-distinct-text dark:text-dark-distinct-text">
+              Initiative overview for the Wikidata Embedding Project, including mission, goals, and broader AI/ML context.
+            </p>
+          </div>
+        </div>
+
+      <p class="!mt-1 text-sm text-red-500">&nbsp;</p>
+      </section>
+
 
       <!-- Partners Section -->
       <section>
@@ -189,141 +193,45 @@
       <p class="!mt-1 text-sm text-red-500">&nbsp;</p>
       </section>
 
-      <!-- Contributors -->
-      <section>
-        <h2 class="text-2xl font-bold mb-6">Contributors</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <!-- Philippe -->
-          <div class="flex items-start p-4 rounded-xl shadow-md bg-light-menu dark:bg-dark-menu hover:shadow-lg transition-shadow">
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Philippe_Saade.jpg/150px-Philippe_Saade.jpg"
-              alt="Philippe Saadé"
-              class="w-12 h-12 rounded-full object-cover mr-4"
-            />
-            <div>
-              <a
-                href="https://www.wikidata.org/wiki/User:Philippe_Saade_(WMDE)"
-                target="_blank"
-                class="text-lg font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-              >Philippe Saadé</a>
-              <p class="text-sm text-light-text dark:text-dark-text">AI/ML Project Manager, WMDE</p>
-            </div>
-          </div>
-
-          <!-- Robert -->
-          <div class="flex items-start p-4 rounded-xl shadow-md bg-light-menu dark:bg-dark-menu hover:shadow-lg transition-shadow">
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Portrait_Robert_Timm_2023.jpg/150px-Portrait_Robert_Timm_2023.jpg"
-              alt="Robert Timm"
-              class="w-12 h-12 rounded-full object-cover mr-4"
-            />
-            <div>
-              <a
-                href="https://www.wikidata.org/wiki/User:Robert_Timm_(WMDE)"
-                target="_blank"
-                class="text-lg font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-              >Robert Timm</a>
-              <p class="text-sm text-light-text dark:text-dark-text">Senior Software Engineer, Wikibase Suite, WMDE</p>
-            </div>
-          </div>
-
-          <!-- Jonathan -->
-          <div class="flex items-start p-4 rounded-xl shadow-md bg-light-menu dark:bg-dark-menu hover:shadow-lg transition-shadow">
-            <img
-              src="https://avatars.githubusercontent.com/u/11221046"
-              alt="Jonathan Fraine"
-              class="w-12 h-12 rounded-full object-cover mr-4"
-            />
-            <div>
-              <a
-                href="https://meta.wikimedia.org/wiki/User:Exowanderer"
-                target="_blank"
-                class="text-lg font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-              >Jonathan Fraine</a>
-              <p class="text-sm text-light-text dark:text-dark-text">Co-Head of Software Development, CTO, WMDE</p>
-            </div>
-          </div>
-
-          <!-- Andrew -->
-          <div class="flex items-start p-4 rounded-xl shadow-md bg-light-menu dark:bg-dark-menu hover:shadow-lg transition-shadow">
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/AndrewtavisIconRounded.png/150px-AndrewtavisIconRounded.png"
-              alt="Andrew Tavis McAllister"
-              class="w-12 h-12 rounded-full object-cover mr-4"
-            />
-            <div>
-              <a
-                href="https://www.wikidata.org/wiki/User:Andrew_McAllister_(WMDE)"
-                target="_blank"
-                class="text-lg font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-              >Andrew Tavis McAllister</a>
-              <p class="text-sm text-light-text dark:text-dark-text">Data Analyst, WMDE</p>
-            </div>
-          </div>
-        </div>
-
-      <p class="!mt-1 text-sm text-red-500">&nbsp;</p>
-      </section>
-
-      <!-- Resources -->
-      <section>
-        <h2 class="text-2xl font-bold mb-6">Resources</h2>
-        <div class="flex flex-wrap gap-4">
-          <a href="/docs" target="_blank" class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
-            API Documentation
-          </a>
-          <a href="https://www.wikidata.org/wiki/Wikidata:Embedding_Project" target="_blank"
-             class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
-            Project Page
-          </a>
-        </div>
-
-      <p class="!mt-1 text-sm text-red-500">&nbsp;</p>
-      </section>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { ref, defineEmits, onMounted, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 const emit = defineEmits(['close'])
-const inputText = ref(apiSecret() || '')
-const errorMessage = ref('')
 const isChecking = ref(false)
-const secretRequired = ref(true)
+const errorMessage = ref('')
+const isApiReady = ref(false)
 
-const canClose = computed(() => !isChecking.value && (!secretRequired.value || apiSecret()))
+const canClose = computed(() => !isChecking.value && isApiReady.value)
 
 onMounted(async () => { await checkApiAccess() })
-
-function storeSecret() { sessionStorage.setItem('api-secret', inputText.value) }
-function apiSecret() { const secret = sessionStorage.getItem('api-secret'); return secret?.length ? secret : null }
 
 async function checkApiAccess() {
   isChecking.value = true
   errorMessage.value = ''
   try {
-    const response = await fetch(`/item/query/?query=`)
-    secretRequired.value = response.status === 401
+    const response = await fetch('/health/ready')
+    isApiReady.value = response.ok
+    if (!response.ok) {
+      errorMessage.value = 'API is not ready yet. Please try again shortly.'
+    }
   } catch {
-    secretRequired.value = true
+    isApiReady.value = false
+    errorMessage.value = 'API is offline. Please try again shortly.'
   } finally {
     isChecking.value = false
   }
 }
 
-async function validateSecret() {
-  errorMessage.value = ''
-  try {
-    const response = await fetch(`/item/query/?query=`, { headers: { 'x-api-secret': inputText.value } })
-    if (response.status === 401) errorMessage.value = 'Invalid API secret. Please try again.'
-    else storeSecret()
-  } catch { errorMessage.value = 'Network error. Please try again later.' }
+function handleEnter() {
+  if (canClose.value) {
+    emit('close')
+  }
 }
-
-async function handleEnter() { await validateSecret(); if (!errorMessage.value) emit('close') }
 
 const email = ref('')
 const emailMessage = ref('')
